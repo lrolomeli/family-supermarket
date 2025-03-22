@@ -1,10 +1,16 @@
+require("dotenv").config(); // Load environment variables from .env file
+
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
-const serviceAccount = require("./key.json");
 
+// Initialize Firebase Admin SDK using environment variables
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"), // Fix newline characters
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  }),
 });
 
 console.log("Firebase Admin SDK initialized successfully!");
