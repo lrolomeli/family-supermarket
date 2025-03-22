@@ -12,6 +12,7 @@ const Login = () => {
       console.log("Logged in user:", result.user);
       navigate("/order"); // Redirect to Order Page after login
     } catch (error) {
+      navigate("/order"); // Redirect to Order Page after login
       console.error("Google Sign-In error:", error);
     }
   };
