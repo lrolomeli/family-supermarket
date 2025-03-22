@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { auth } from "../firebase";
 import products from "../data/products";
 import { Link } from "react-router-dom";
+import API_BASE_URL from "../config";
 
 const Order = () => {
   // producto seleccionado
@@ -60,7 +61,7 @@ const Order = () => {
     // hacer un post de la orden a la base de datos
     try {
       
-      const response = await fetch("http://localhost:5000/orders", {
+      const response = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

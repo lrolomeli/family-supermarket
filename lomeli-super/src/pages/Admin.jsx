@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth } from "../firebase";
+import API_BASE_URL from "../config";
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
@@ -10,7 +11,7 @@ const Admin = () => {
       if (!user) return;
 
       try {
-        const response = await fetch(`http://localhost:5000/admin/orders?uid=${user.uid}`);
+        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
         const data = await response.json();
         setOrders(data);
       } catch (error) {

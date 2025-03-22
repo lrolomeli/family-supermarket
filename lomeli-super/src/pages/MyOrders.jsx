@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth } from "../firebase";
-import { Link } from "react-router-dom";
+import API_BASE_URL from "../config";
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -12,7 +12,7 @@ const MyOrders = () => {
       if (!user) return;
 
       try {
-        const response = await fetch(`http://localhost:5000/orders?uid=${user.uid}`);
+        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
         const data = await response.json();
         setOrders(data);
       } catch (error) {
@@ -29,11 +29,11 @@ const MyOrders = () => {
 
   const handleDeleteClick = async (orderId, productIndex) => {
     try {
-      const response = await fetch(`http://localhost:5000/orders/${orderId}/products/${productIndex}`, {method: 'DELETE'});
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/products/${productIndex}`, {method: 'DELETE'});
       
       if (response.ok) {
         alert('Item deleted');
-        const response = await fetch(`http://localhost:5000/orders?uid=${user.uid}`);
+        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
         const data = await response.json();
         setOrders(data);
       }
@@ -45,11 +45,11 @@ const MyOrders = () => {
 
   const handleRemoveClick = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/orders/${id}`, {method: 'DELETE'});
+      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {method: 'DELETE'});
       
       if (response.ok) {
         alert('Order deleted');
-        const response = await fetch(`http://localhost:5000/orders?uid=${user.uid}`);
+        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
         const data = await response.json();
         setOrders(data);
       }
