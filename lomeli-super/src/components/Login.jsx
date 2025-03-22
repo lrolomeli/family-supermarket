@@ -8,6 +8,7 @@ const Login = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      navigate("/order");
       const result = await signInWithPopup(auth, googleProvider);
       console.log("Logged in user:", result.user);
       navigate("/order"); // Redirect to Order Page after login
