@@ -1,0 +1,46 @@
+Creo que para editar una orden es necesario hacer lo siguiente:
+
+    - Tener el identificador de la orden
+    - Traer el objeto orden
+    - Mostrar el objeto
+
+    {
+        {id:01923}
+        {
+            productos:{
+                producto:cantidad:unidad [0]
+                producto:cantidad:unidad [1]
+                producto:cantidad:unidad [2]
+                producto:cantidad:unidad [3]
+            }
+        }
+    }
+
+    no necesitamos el arreglo porque sabemos cual es el identificador de cada producto
+
+    por lo que podemos colocar un boton por cada producto utilizando un ciclo for
+    cada boton debe estar asociado a un producto, ya sea el id o posicion del arreglo
+
+    cuando se presiona el boton que debe pasar 
+
+    debe haber un boton editar orden 
+
+    que inmediatamente despliegue todos los productos
+
+    nombre_del_producto (cantidad_editable) (unidades) [boton_para_eliminar_producto]
+    [boton_para_anadir_producto] 
+
+    EL programa debe desplegar todos los productos cada uno con un boton asociado
+    de tal manera que al presionarse el boton conozcamos que indice de la lista de productos borrar
+
+    si se presiona el boton de eliminar producto. 
+        1. se modifica el json eliminando el producto seleccionado.
+        2. se hace una operacion put para modificar el producto en la base de datos.
+        3. se corrobora que se haya realizado la operacion correctamente con la respuesta.
+        4. se actualiza el objeto en la pantalla.
+    
+    para modificar la cantidad o las unidades (hay un boton con una palomita que al presionarse)
+        1. vera si hay cambios entre el objeto actual y el original o anterior.
+        2. si no hay cambios termina y no hace nada... puedes enviar un mensaje de no se ha modificado el objeto
+        3. si se modifico, entonces se manda el objeto modificado a la base de datos.
+        4. se corrobora la operacion realizada correctamente.
