@@ -147,6 +147,12 @@ const Order = () => {
             {cart.map((item, index) => (
               <li key={index}>
                 {item.name} - {item.quantity} {item.unit}
+                <button
+                  onClick={() => setCart((prev) => prev.filter((_, i) => i !== index))}
+                  style={{ marginLeft: "10px" }}
+                >
+                  Remove
+                </button>
               </li>
             ))}
           </ul>
