@@ -1,61 +1,52 @@
 import React, { useEffect, useState } from "react";
 import { auth } from "../firebase";
 import API_BASE_URL from "../config";
+import apiFetch from "../api";
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
-  const [editingOrderId, setEditingOrderId] = useState(null); // Track which order is being edited
+  const [editingOrderId, setEditingOrderId] = useState(null);
   const user = auth.currentUser;
 
+  const refreshOrders = async () => {
+    const response = await apiFetch(`${API_BASE_URL}/orders`);
+    const data = await response.json();
+    setOrders(data);
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!user) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
-        const data = await response.json();
-        setOrders(data);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      }
-    };
-
-    fetchOrders();
+    if (!user) return;
+    refreshOrders().catch((e) => console.error("Error fetching orders:", e));
   }, [user]);
 
-  const handleEditClick = (orderId) => {
-    setEditingOrderId(orderId); // Set the order ID being edited
-  };
+  const handleEditClick = (orderId) => setEditingOrderId(orderId);
 
   const handleDeleteClick = async (orderId, productIndex) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/products/${productIndex}`, {method: 'DELETE'});
-      
+      const response = await apiFetch(
+        `${API_BASE_URL}/orders/${orderId}/products/${productIndex}`,
+        { method: "DELETE" }
+      );
       if (response.ok) {
-        alert('Item deleted');
-        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
-        const data = await response.json();
-        setOrders(data);
+        alert("Item deleted");
+        await refreshOrders();
       }
-  
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error("Error deleting product:", error);
     }
   };
 
   const handleRemoveClick = async (id) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {method: 'DELETE'});
-      
+      const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, {
+        method: "DELETE",
+      });
       if (response.ok) {
-        alert('Order deleted');
-        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
-        const data = await response.json();
-        setOrders(data);
+        alert("Order deleted");
+        await refreshOrders();
       }
-  
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error("Error deleting order:", error);
     }
   };
 
@@ -73,7 +64,7 @@ const MyOrders = () => {
                 {order.products.map((product, index) => (
                   <li key={index}>
                     {product.quantity} {product.unit} of {product.name}
-                    {editingOrderId === order.id && ( // Show delete button if this order is being edited
+                    {editingOrderId === order.id && (
                       <button onClick={() => handleDeleteClick(order.id, index)}>
                         Delete
                       </button>

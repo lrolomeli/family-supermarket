@@ -3,6 +3,7 @@ import { auth } from "../firebase";
 import products from "../data/products";
 import { Link } from "react-router-dom";
 import API_BASE_URL from "../config";
+import apiFetch from "../api";
 
 const Order = () => {
   // producto seleccionado
@@ -54,22 +55,22 @@ const Order = () => {
 
     // asociar el carrito con el usuario
     const order = {
-      uid: user.uid,
       products: cart,
     };
 
     // hacer un post de la orden a la base de datos
     try {
       
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const response = await apiFetch(`${API_BASE_URL}/orders`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(order),
       });
 
-      // esperamos para ver si la orden fue agregada exitosamente
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Server error ${response.status}: ${errText}`);
+      }
+
       const result = await response.json();
       console.log("Order submitted:", result);
       alert("Order submitted successfully!");
@@ -77,7 +78,7 @@ const Order = () => {
 
     } catch (error) {
       console.error("Error submitting order:", error);
-      alert("Failed to submit order.");
+      alert(`Failed to submit order: ${error.message}`);
     }
   };
 

@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { auth } from "../firebase";
 import API_BASE_URL from "../config";
+import apiFetch from "../api";
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
-  const user = auth.currentUser;
+  const user = null; // auth handled via token
 
   useEffect(() => {
     const fetchAllOrders = async () => {
-      if (!user) return;
-
       try {
-        const response = await fetch(`${API_BASE_URL}/orders?uid=${user.uid}`);
+        const response = await apiFetch(`${API_BASE_URL}/admin/orders`);
         const data = await response.json();
         setOrders(data);
       } catch (error) {
@@ -20,7 +18,7 @@ const Admin = () => {
     };
 
     fetchAllOrders();
-  }, [user]);
+  }, []);
 
   return (
     <div>
