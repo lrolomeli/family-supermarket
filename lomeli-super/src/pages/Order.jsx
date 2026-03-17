@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { auth } from "../firebase";
 import products from "../data/products";
-import { Link } from "react-router-dom";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 
@@ -160,9 +159,6 @@ const Order = () => {
         </div>
       )}
 
-      <Link to="/my-orders">
-        <button style={{ marginTop: "20px" }}>View My Orders</button>
-      </Link>
     </div>
   );
 };

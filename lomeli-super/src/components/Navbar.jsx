@@ -1,0 +1,25 @@
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { auth } from "../firebase";
+import { signOut } from "firebase/auth";
+
+const Navbar = ({ user, isAdmin }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/login");
+  };
+
+  return (
+    <nav style={{ display: "flex", gap: "16px", padding: "10px 20px", borderBottom: "1px solid #ccc" }}>
+      <Link to="/order">New Order</Link>
+      <Link to="/my-orders">My Orders</Link>
+      {isAdmin && <Link to="/admin">Admin</Link>}
+      <span style={{ marginLeft: "auto" }}>{user?.email}</span>
+      <button onClick={handleLogout}>Logout</button>
+    </nav>
+  );
+};
+
+export default Navbar;
