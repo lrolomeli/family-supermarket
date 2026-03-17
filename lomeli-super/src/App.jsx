@@ -27,8 +27,10 @@ const App = () => {
         try {
           const res = await apiFetch(`${API_BASE_URL}/me`);
           const data = await res.json();
+          console.log("/me response:", data);
           setApproved(data.approved);
-        } catch {
+        } catch (e) {
+          console.error("/me error:", e);
           setApproved(false);
         }
       } else {
@@ -44,7 +46,7 @@ const App = () => {
 
   const PrivateRoute = ({ children }) => {
     if (!user) return <Navigate to="/login" replace />;
-    if (!approved) return <Navigate to="/pending" replace />;
+    if (approved === false) return <Navigate to="/pending" replace />;
     return (
       <>
         <Navbar user={user} isAdmin={isAdmin} />
@@ -66,7 +68,11 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={user ? <Navigate to="/order" replace /> : <Login />} />
-        <Route path="/pending" element={!user ? <Navigate to="/login" replace /> : <Pending />} />
+        <Route path="/pending" element={
+          !user ? <Navigate to="/login" replace /> :
+          approved ? <Navigate to="/order" replace /> :
+          <Pending />
+        } />
         <Route path="/order" element={<PrivateRoute><Order /></PrivateRoute>} />
         <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
