@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 import { calcOrderTotal, formatMXN } from "../utils/pricing";
@@ -34,6 +35,119 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
 );
 
 const TABS = ["Dashboard", "Orders", "Prices"];
+
+const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload }) => {
+  const [search, setSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [csvStatus, setCsvStatus] = useState(null);
+
+  const filtered = catalog.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    await onSaveAll();
+    setSaving(false);
+  };
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setCsvStatus("uploading");
+    try {
+      await onCsvUpload(file);
+      setCsvStatus("ok");
+    } catch {
+      setCsvStatus("error");
+    }
+    e.target.value = "";
+  };
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center" }}>
+        <input
+          placeholder="Buscar producto..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px", flex: 1, minWidth: "180px" }}
+        />
+        <button onClick={handleSaveAll} disabled={saving} style={{
+          padding: "7px 18px", background: "#22c55e", color: "#fff",
+          border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+        }}>
+          {saving ? "Saving..." : "Save All"}
+        </button>
+        <label style={{
+          padding: "7px 18px", background: "#3b82f6", color: "#fff",
+          borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+        }}>
+          {csvStatus === "uploading" ? "Uploading..." : "Upload CSV"}
+          <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
+        </label>
+        <a
+          href={`data:text/csv;charset=utf-8,id,name,price_piece,price_kg\n${catalog.map(p => `${p.id},${p.name},${p.price_piece},${p.price_kg}`).join("\n")}`}
+          download="precios.csv"
+          style={{
+            padding: "7px 18px", background: "#f3f4f6", color: "#374151",
+            borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px"
+          }}
+        >
+          Export CSV
+        </a>
+      </div>
+      {csvStatus === "ok" && <p style={{ color: "#22c55e", marginBottom: "10px", fontSize: "13px" }}>✅ CSV importado correctamente</p>}
+      {csvStatus === "error" && <p style={{ color: "#ef4444", marginBottom: "10px", fontSize: "13px" }}>❌ Error al importar CSV</p>}
+
+      <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "12px" }}>
+        Formato CSV: columnas <code>id, name, price_piece, price_kg</code>
+      </p>
+
+      {/* Table */}
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+          <thead>
+            <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+              <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Producto</th>
+              <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / pieza</th>
+              <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / kg</th>
+              <th style={{ padding: "12px 16px" }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((product, i) => (
+              <tr key={product.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                <td style={{ padding: "10px 16px", fontWeight: 500, color: "#374151" }}>{product.name}</td>
+                <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                  <input type="number" min="0" step="0.5"
+                    value={editingPrices[product.id]?.price_piece ?? product.price_piece}
+                    onChange={e => onPriceChange(product.id, "price_piece", e.target.value)}
+                    style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
+                  />
+                </td>
+                <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                  <input type="number" min="0" step="0.5"
+                    value={editingPrices[product.id]?.price_kg ?? product.price_kg}
+                    onChange={e => onPriceChange(product.id, "price_kg", e.target.value)}
+                    style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
+                  />
+                </td>
+                <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                  <button onClick={() => onSaveOne(product.id)} style={{
+                    padding: "4px 14px", background: "#f3f4f6", color: "#374151",
+                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
+                  }}>Save</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
@@ -85,6 +199,36 @@ const Admin = () => {
     });
     const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
     setCatalog(updated);
+  };
+
+  const handleSaveAll = async () => {
+    const products = Object.entries(editingPrices).map(([id, prices]) => ({
+      id: Number(id), ...prices,
+    }));
+    await apiFetch(`${API_BASE_URL}/admin/products/bulk`, {
+      method: "POST",
+      body: JSON.stringify({ products }),
+    });
+    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    setCatalog(updated);
+  };
+
+  const handleCsvUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/admin/products/csv`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const result = await res.json();
+    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    setCatalog(updated);
+    const initial = {};
+    updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
+    setEditingPrices(initial);
+    alert(`✅ ${result.updated} productos actualizados`);
   };
 
   // --- Stats ---
@@ -294,52 +438,15 @@ const Admin = () => {
       )}
       {/* PRICES TAB */}
       {tab === "Prices" && (
-        <div>
-          <p style={{ color: "#6b7280", marginBottom: "16px", fontSize: "14px" }}>
-            Edita los precios y presiona Save en cada fila. Los cambios aplican de inmediato.
-          </p>
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-              <thead>
-                <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Producto</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>Precio / pieza</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>Precio / kg</th>
-                  <th style={{ padding: "12px 16px" }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {catalog.map((product, i) => (
-                  <tr key={product.id} style={{ borderBottom: i < catalog.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                    <td style={{ padding: "10px 16px", fontWeight: 500, color: "#374151" }}>{product.name}</td>
-                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                      <input
-                        type="number" min="0" step="0.5"
-                        value={editingPrices[product.id]?.price_piece ?? product.price_piece}
-                        onChange={e => handlePriceChange(product.id, "price_piece", e.target.value)}
-                        style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
-                      />
-                    </td>
-                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                      <input
-                        type="number" min="0" step="0.5"
-                        value={editingPrices[product.id]?.price_kg ?? product.price_kg}
-                        onChange={e => handlePriceChange(product.id, "price_kg", e.target.value)}
-                        style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
-                      />
-                    </td>
-                    <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                      <button onClick={() => handleSavePrice(product.id)} style={{
-                        padding: "4px 14px", background: "#3b82f6", color: "#fff",
-                        border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
-                      }}>Save</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PricesTab
+          catalog={catalog}
+          editingPrices={editingPrices}
+          onPriceChange={handlePriceChange}
+          onSaveOne={handleSavePrice}
+          onSaveAll={handleSaveAll}
+          onCsvUpload={handleCsvUpload}
+          apiBaseUrl={API_BASE_URL}
+        />
       )}
     </div>
   );

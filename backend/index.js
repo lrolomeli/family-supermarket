@@ -4,7 +4,11 @@ const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 const { Pool } = require("pg");
+const multer = require("multer");
+const { parse } = require("csv-parse/sync");
 const runSetup = require("./db/setup");
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Firebase Admin (solo para verificar tokens de Google)
 admin.initializeApp({
@@ -74,6 +78,51 @@ server.put("/admin/products/:id", authenticate, async (req, res) => {
       [price_piece, price_kg, req.params.id]
     );
     res.status(200).send("Price updated");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /admin/products/bulk - actualizar todos los precios de un golpe
+server.post("/admin/products/bulk", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { products } = req.body; // [{ id, price_piece, price_kg }]
+    for (const p of products) {
+      await pool.query(
+        "UPDATE products SET price_piece = $1, price_kg = $2 WHERE id = $3",
+        [p.price_piece, p.price_kg, p.id]
+      );
+    }
+    res.status(200).json({ updated: products.length });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /admin/products/csv - subir CSV con precios
+server.post("/admin/products/csv", authenticate, upload.single("file"), async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const records = parse(req.file.buffer.toString(), {
+      columns: true, skip_empty_lines: true, trim: true,
+    });
+
+    // Espera columnas: id, price_piece, price_kg
+    let updated = 0;
+    for (const row of records) {
+      if (!row.id) continue;
+      await pool.query(
+        "UPDATE products SET price_piece = $1, price_kg = $2 WHERE id = $3",
+        [parseFloat(row.price_piece) || 0, parseFloat(row.price_kg) || 0, parseInt(row.id)]
+      );
+      updated++;
+    }
+    res.status(200).json({ updated });
   } catch (error) {
     res.status(500).send(error.message);
   }
