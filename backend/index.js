@@ -61,7 +61,7 @@ server.get("/admin/orders", authenticate, async (req, res) => {
     if (!user.length || !user[0].is_admin) {
       return res.status(403).send("Unauthorized: Only admins can access this endpoint");
     }
-    const { rows } = await pool.query("SELECT * FROM orders");
+    const { rows } = await pool.query("SELECT o.*, u.email as user_email FROM orders o JOIN users u ON o.uid = u.uid");
     res.status(200).json(rows);
   } catch (error) {
     console.error("Error fetching all orders:", error);

@@ -30,11 +30,11 @@ const Admin = () => {
           {orders.map((order) => (
             <li key={order.id}>
               <h3>Order ID: {order.id}</h3>
-              <p>User: {order.uid}</p>
+              <p>User: {order.user_email || order.uid}</p>
               <ul>
                 {order.products.map((product, index) => (
                   <li key={index}>
-                    {product.quantity} x {product.item}
+                    {product.quantity} {product.unit} of {product.name}
                   </li>
                 ))}
               </ul>
