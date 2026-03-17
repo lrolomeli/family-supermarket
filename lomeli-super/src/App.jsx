@@ -11,6 +11,7 @@ import MyOrders from "./pages/MyOrders";
 import Admin from "./pages/Admin";
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+console.log("ADMIN_EMAIL:", ADMIN_EMAIL);
 
 const App = () => {
   const [user, setUser] = useState(undefined);

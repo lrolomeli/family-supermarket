@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
+import { calcOrderTotal, formatMXN } from "../utils/pricing";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from "recharts";
@@ -32,10 +33,12 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
   </div>
 );
 
-const TABS = ["Dashboard", "Orders"];
+const TABS = ["Dashboard", "Orders", "Prices"];
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
+  const [catalog, setCatalog] = useState([]);
+  const [editingPrices, setEditingPrices] = useState({});
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterUser, setFilterUser] = useState("all");
@@ -50,7 +53,18 @@ const Admin = () => {
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+    fetch(`${API_BASE_URL}/products`)
+      .then(r => r.json())
+      .then(data => {
+        setCatalog(data);
+        const initial = {};
+        data.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
+        setEditingPrices(initial);
+      })
+      .catch(console.error);
+  }, []);
 
   const handleStatusChange = async (orderId, status) => {
     await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
@@ -58,6 +72,19 @@ const Admin = () => {
       body: JSON.stringify({ status }),
     });
     await fetchOrders();
+  };
+
+  const handlePriceChange = (id, field, value) => {
+    setEditingPrices(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+
+  const handleSavePrice = async (id) => {
+    await apiFetch(`${API_BASE_URL}/admin/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(editingPrices[id]),
+    });
+    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    setCatalog(updated);
   };
 
   // --- Stats ---
@@ -68,8 +95,12 @@ const Admin = () => {
     const cancelled = orders.filter(o => o.status === "cancelled").length;
     const uniqueUsers = new Set(orders.map(o => o.user_email)).size;
     const totalItems = orders.reduce((acc, o) => acc + (o.products?.length || 0), 0);
-    return { total, pending, completed, cancelled, uniqueUsers, totalItems };
-  }, [orders]);
+    const revenue = catalog.length
+      ? orders.filter(o => o.status !== "cancelled")
+          .reduce((acc, o) => acc + calcOrderTotal(o.products, catalog), 0)
+      : null;
+    return { total, pending, completed, cancelled, uniqueUsers, totalItems, revenue };
+  }, [orders, catalog]);
 
   // Top products chart data
   const topProducts = useMemo(() => {
@@ -143,6 +174,9 @@ const Admin = () => {
             <StatCard label="Cancelled" value={stats.cancelled} color="#ef4444" />
             <StatCard label="Customers" value={stats.uniqueUsers} color="#8b5cf6" />
             <StatCard label="Total Items" value={stats.totalItems} color="#06b6d4" />
+            {stats.revenue !== null && (
+              <StatCard label="Revenue (est.)" value={formatMXN(stats.revenue)} color="#10b981" />
+            )}
           </div>
 
           {/* Charts */}
@@ -225,6 +259,11 @@ const Admin = () => {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                         <span style={{ fontWeight: 600, color: "#374151" }}>Order #{order.id}</span>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          {catalog.length > 0 && (
+                            <span style={{ fontWeight: 700, color: "#22c55e" }}>
+                              {formatMXN(calcOrderTotal(order.products, catalog))}
+                            </span>
+                          )}
                           <Badge status={order.status} />
                           <select value={order.status || "pending"}
                             onChange={e => handleStatusChange(order.id, e.target.value)}
@@ -251,6 +290,55 @@ const Admin = () => {
               </div>
             ))
           )}
+        </div>
+      )}
+      {/* PRICES TAB */}
+      {tab === "Prices" && (
+        <div>
+          <p style={{ color: "#6b7280", marginBottom: "16px", fontSize: "14px" }}>
+            Edita los precios y presiona Save en cada fila. Los cambios aplican de inmediato.
+          </p>
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+              <thead>
+                <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Producto</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>Precio / pieza</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>Precio / kg</th>
+                  <th style={{ padding: "12px 16px" }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalog.map((product, i) => (
+                  <tr key={product.id} style={{ borderBottom: i < catalog.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                    <td style={{ padding: "10px 16px", fontWeight: 500, color: "#374151" }}>{product.name}</td>
+                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                      <input
+                        type="number" min="0" step="0.5"
+                        value={editingPrices[product.id]?.price_piece ?? product.price_piece}
+                        onChange={e => handlePriceChange(product.id, "price_piece", e.target.value)}
+                        style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
+                      />
+                    </td>
+                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                      <input
+                        type="number" min="0" step="0.5"
+                        value={editingPrices[product.id]?.price_kg ?? product.price_kg}
+                        onChange={e => handlePriceChange(product.id, "price_kg", e.target.value)}
+                        style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
+                      />
+                    </td>
+                    <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                      <button onClick={() => handleSavePrice(product.id)} style={{
+                        padding: "4px 14px", background: "#3b82f6", color: "#fff",
+                        border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
+                      }}>Save</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

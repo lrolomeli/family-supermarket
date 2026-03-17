@@ -3,6 +3,7 @@ import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 import productCatalog from "../data/products";
+import { calcOrderTotal, formatMXN } from "../utils/pricing";
 
 const STATUS_COLORS = {
   pending:   { bg: "#fff8e1", color: "#f59e0b", label: "Pending" },
@@ -27,6 +28,7 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [editedProducts, setEditedProducts] = useState([]);
+  const [catalog, setCatalog] = useState([]);
   const user = auth.currentUser;
 
   const refreshOrders = async () => {
@@ -38,6 +40,10 @@ const MyOrders = () => {
   useEffect(() => {
     if (!user) return;
     refreshOrders().catch((e) => console.error("Error fetching orders:", e));
+    fetch(`${API_BASE_URL}/products`)
+      .then(r => r.json())
+      .then(setCatalog)
+      .catch(console.error);
   }, [user]);
 
   const handleEditClick = (order) => {
@@ -110,7 +116,14 @@ const MyOrders = () => {
               {/* Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                 <span style={{ fontWeight: 600, color: "#374151" }}>Order #{order.id}</span>
-                <StatusBadge status={order.status} />
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  {catalog.length > 0 && (
+                    <span style={{ fontWeight: 700, color: "#22c55e", fontSize: "15px" }}>
+                      {formatMXN(calcOrderTotal(order.products, catalog))}
+                    </span>
+                  )}
+                  <StatusBadge status={order.status} />
+                </div>
               </div>
 
               {/* Products */}

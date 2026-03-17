@@ -51,7 +51,34 @@ const syncUser = async (uid, email) => {
   );
 };
 
-// GET /admin/orders - solo admins
+// GET /products - catálogo con precios
+server.get("/products", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM products ORDER BY id");
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// PUT /admin/products/:id - actualizar precio (solo admin)
+server.put("/admin/products/:id", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { price_piece, price_kg } = req.body;
+    await pool.query(
+      "UPDATE products SET price_piece = $1, price_kg = $2 WHERE id = $3",
+      [price_piece, price_kg, req.params.id]
+    );
+    res.status(200).send("Price updated");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
 server.get("/admin/orders", authenticate, async (req, res) => {
   try {
     const { rows: user } = await pool.query(
