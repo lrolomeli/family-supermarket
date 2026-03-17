@@ -10,7 +10,7 @@ import Order from "./pages/Order";
 import MyOrders from "./pages/MyOrders";
 import Admin from "./pages/Admin";
 
-const ADMIN_EMAIL = "lro.lomeli@gmail.com";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 const App = () => {
   const [user, setUser] = useState(undefined);
