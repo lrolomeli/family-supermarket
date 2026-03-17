@@ -69,7 +69,30 @@ server.get("/admin/orders", authenticate, async (req, res) => {
   }
 });
 
-// GET /orders - ordenes del usuario autenticado
+// PATCH /admin/orders/:id/status - actualizar status de una orden
+server.patch("/admin/orders/:id/status", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query(
+      "SELECT is_admin FROM users WHERE uid = $1",
+      [req.user.uid]
+    );
+    if (!user.length || !user[0].is_admin) {
+      return res.status(403).send("Unauthorized");
+    }
+    const { status } = req.body;
+    const validStatuses = ["pending", "completed", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).send("Invalid status");
+    }
+    await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, req.params.id]);
+    res.status(200).send("Status updated");
+  } catch (error) {
+    console.error("Error updating status:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+
 server.get("/orders", authenticate, async (req, res) => {
   try {
     await syncUser(req.user.uid, req.user.email);

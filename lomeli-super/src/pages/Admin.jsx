@@ -4,21 +4,30 @@ import apiFetch from "../api";
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
-  const user = null; // auth handled via token
 
-  useEffect(() => {
-    const fetchAllOrders = async () => {
-      try {
-        const response = await apiFetch(`${API_BASE_URL}/admin/orders`);
-        const data = await response.json();
-        setOrders(data);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      }
-    };
+  const fetchOrders = async () => {
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/admin/orders`);
+      const data = await response.json();
+      setOrders(data);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    }
+  };
 
-    fetchAllOrders();
-  }, []);
+  useEffect(() => { fetchOrders(); }, []);
+
+  const handleStatusChange = async (orderId, status) => {
+    try {
+      await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      await fetchOrders();
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
 
   return (
     <div>
@@ -29,8 +38,19 @@ const Admin = () => {
         <ul>
           {orders.map((order) => (
             <li key={order.id}>
-              <h3>Order ID: {order.id}</h3>
-              <p>User: {order.user_email || order.uid}</p>
+              <h3>Order #{order.id} — {order.user_email}</h3>
+              <p>
+                Status:
+                <select
+                  value={order.status || "pending"}
+                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                  style={{ marginLeft: "8px" }}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </p>
               <ul>
                 {order.products.map((product, index) => (
                   <li key={index}>
