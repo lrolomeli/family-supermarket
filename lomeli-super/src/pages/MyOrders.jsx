@@ -6,6 +6,7 @@ import apiFetch from "../api";
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [editingOrderId, setEditingOrderId] = useState(null);
+  const [editedProducts, setEditedProducts] = useState([]);
   const user = auth.currentUser;
 
   const refreshOrders = async () => {
@@ -19,32 +20,53 @@ const MyOrders = () => {
     refreshOrders().catch((e) => console.error("Error fetching orders:", e));
   }, [user]);
 
-  const handleEditClick = (orderId) => setEditingOrderId(orderId);
+  const handleEditClick = (order) => {
+    setEditingOrderId(order.id);
+    setEditedProducts(order.products.map((p) => ({ ...p })));
+  };
 
-  const handleDeleteClick = async (orderId, productIndex) => {
+  const handleCancelEdit = () => {
+    setEditingOrderId(null);
+    setEditedProducts([]);
+  };
+
+  const handleProductChange = (index, field, value) => {
+    setEditedProducts((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, [field]: field === "quantity" ? Number(value) : value } : p))
+    );
+  };
+
+  const handleSaveEdit = async (orderId) => {
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: "PUT",
+        body: JSON.stringify({ products: editedProducts }),
+      });
+      if (response.ok) {
+        setEditingOrderId(null);
+        await refreshOrders();
+      }
+    } catch (error) {
+      console.error("Error updating order:", error);
+    }
+  };
+
+  const handleDeleteProduct = async (orderId, productIndex) => {
     try {
       const response = await apiFetch(
         `${API_BASE_URL}/orders/${orderId}/products/${productIndex}`,
         { method: "DELETE" }
       );
-      if (response.ok) {
-        alert("Item deleted");
-        await refreshOrders();
-      }
+      if (response.ok) await refreshOrders();
     } catch (error) {
       console.error("Error deleting product:", error);
     }
   };
 
-  const handleRemoveClick = async (id) => {
+  const handleRemoveOrder = async (id) => {
     try {
-      const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        alert("Order deleted");
-        await refreshOrders();
-      }
+      const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, { method: "DELETE" });
+      if (response.ok) await refreshOrders();
     } catch (error) {
       console.error("Error deleting order:", error);
     }
@@ -60,20 +82,48 @@ const MyOrders = () => {
           {orders.map((order) => (
             <li key={order.id}>
               <h3>Order ID: {order.id}</h3>
-              <ul>
-                {order.products.map((product, index) => (
-                  <li key={index}>
-                    {product.quantity} {product.unit} of {product.name}
-                    {editingOrderId === order.id && (
-                      <button onClick={() => handleDeleteClick(order.id, index)}>
-                        Delete
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => handleEditClick(order.id)}>Edit</button>
-              <button onClick={() => handleRemoveClick(order.id)}>Remove</button>
+              {editingOrderId === order.id ? (
+                <div>
+                  <ul>
+                    {editedProducts.map((product, index) => (
+                      <li key={index}>
+                        {product.name} —
+                        <input
+                          type="number"
+                          min="1"
+                          value={product.quantity}
+                          onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
+                          style={{ width: "50px", margin: "0 6px" }}
+                        />
+                        <select
+                          value={product.unit}
+                          onChange={(e) => handleProductChange(index, "unit", e.target.value)}
+                        >
+                          <option value="pieces">Pieces</option>
+                          <option value="kg">kg</option>
+                        </select>
+                        <button onClick={() => handleDeleteProduct(order.id, index)} style={{ marginLeft: "8px" }}>
+                          Delete
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button onClick={() => handleSaveEdit(order.id)}>Save</button>
+                  <button onClick={handleCancelEdit} style={{ marginLeft: "8px" }}>Cancel</button>
+                </div>
+              ) : (
+                <div>
+                  <ul>
+                    {order.products.map((product, index) => (
+                      <li key={index}>
+                        {product.quantity} {product.unit} of {product.name}
+                      </li>
+                    ))}
+                  </ul>
+                  <button onClick={() => handleEditClick(order)}>Edit</button>
+                  <button onClick={() => handleRemoveOrder(order.id)} style={{ marginLeft: "8px" }}>Remove</button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
