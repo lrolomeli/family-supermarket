@@ -1,9 +1,44 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
+} from "recharts";
+
+const STATUS_COLORS = {
+  pending:   { bg: "#fff8e1", color: "#f59e0b" },
+  completed: { bg: "#e8f5e9", color: "#22c55e" },
+  cancelled: { bg: "#fce4ec", color: "#ef4444" },
+};
+
+const Badge = ({ status = "pending" }) => {
+  const s = STATUS_COLORS[status] || STATUS_COLORS.pending;
+  return (
+    <span style={{
+      background: s.bg, color: s.color, padding: "2px 10px",
+      borderRadius: "999px", fontSize: "12px", fontWeight: 600, textTransform: "uppercase"
+    }}>{status}</span>
+  );
+};
+
+const StatCard = ({ label, value, color = "#3b82f6" }) => (
+  <div style={{
+    background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+    padding: "20px 24px", flex: 1, minWidth: "140px",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+  }}>
+    <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>{label}</div>
+    <div style={{ fontSize: "28px", fontWeight: 700, color }}>{value}</div>
+  </div>
+);
+
+const TABS = ["Dashboard", "Orders"];
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
+  const [tab, setTab] = useState("Dashboard");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterUser, setFilterUser] = useState("all");
 
   const fetchOrders = async () => {
     try {
@@ -18,49 +53,205 @@ const Admin = () => {
   useEffect(() => { fetchOrders(); }, []);
 
   const handleStatusChange = async (orderId, status) => {
-    try {
-      await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
-      await fetchOrders();
-    } catch (error) {
-      console.error("Error updating status:", error);
-    }
+    await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    await fetchOrders();
   };
 
+  // --- Stats ---
+  const stats = useMemo(() => {
+    const total = orders.length;
+    const pending = orders.filter(o => o.status === "pending" || !o.status).length;
+    const completed = orders.filter(o => o.status === "completed").length;
+    const cancelled = orders.filter(o => o.status === "cancelled").length;
+    const uniqueUsers = new Set(orders.map(o => o.user_email)).size;
+    const totalItems = orders.reduce((acc, o) => acc + (o.products?.length || 0), 0);
+    return { total, pending, completed, cancelled, uniqueUsers, totalItems };
+  }, [orders]);
+
+  // Top products chart data
+  const topProducts = useMemo(() => {
+    const counts = {};
+    orders.forEach(o => {
+      o.products?.forEach(p => {
+        counts[p.name] = (counts[p.name] || 0) + 1;
+      });
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }, [orders]);
+
+  // Orders per user chart data
+  const ordersPerUser = useMemo(() => {
+    const counts = {};
+    orders.forEach(o => {
+      const email = o.user_email?.split("@")[0] || o.uid;
+      counts[email] = (counts[email] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, count]) => ({ name, count }));
+  }, [orders]);
+
+  // Filtered orders
+  const uniqueUsers = useMemo(() => [...new Set(orders.map(o => o.user_email))], [orders]);
+  const filteredOrders = useMemo(() => orders.filter(o => {
+    const statusMatch = filterStatus === "all" || (o.status || "pending") === filterStatus;
+    const userMatch = filterUser === "all" || o.user_email === filterUser;
+    return statusMatch && userMatch;
+  }), [orders, filterStatus, filterUser]);
+
+  // Group filtered orders by user
+  const ordersByUser = useMemo(() => {
+    const groups = {};
+    filteredOrders.forEach(o => {
+      const key = o.user_email || o.uid;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(o);
+    });
+    return groups;
+  }, [filteredOrders]);
+
+  const CHART_COLORS = ["#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899"];
+
   return (
-    <div>
-      <h2>All Orders</h2>
-      {orders.length === 0 ? (
-        <p>No orders found.</p>
-      ) : (
-        <ul>
-          {orders.map((order) => (
-            <li key={order.id}>
-              <h3>Order #{order.id} — {order.user_email}</h3>
-              <p>
-                Status:
-                <select
-                  value={order.status || "pending"}
-                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                  style={{ marginLeft: "8px" }}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </p>
-              <ul>
-                {order.products.map((product, index) => (
-                  <li key={index}>
-                    {product.quantity} {product.unit} of {product.name}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+    <div style={{ maxWidth: "960px", margin: "0 auto", padding: "24px 16px" }}>
+      <h2 style={{ marginBottom: "20px" }}>Admin Panel</h2>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
+        {TABS.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{
+            padding: "8px 20px", borderRadius: "8px", border: "none", cursor: "pointer",
+            fontWeight: 600, fontSize: "14px",
+            background: tab === t ? "#3b82f6" : "#f3f4f6",
+            color: tab === t ? "#fff" : "#374151",
+          }}>{t}</button>
+        ))}
+      </div>
+
+      {/* DASHBOARD TAB */}
+      {tab === "Dashboard" && (
+        <div>
+          {/* Stat cards */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
+            <StatCard label="Total Orders" value={stats.total} color="#3b82f6" />
+            <StatCard label="Pending" value={stats.pending} color="#f59e0b" />
+            <StatCard label="Completed" value={stats.completed} color="#22c55e" />
+            <StatCard label="Cancelled" value={stats.cancelled} color="#ef4444" />
+            <StatCard label="Customers" value={stats.uniqueUsers} color="#8b5cf6" />
+            <StatCard label="Total Items" value={stats.totalItems} color="#06b6d4" />
+          </div>
+
+          {/* Charts */}
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+            <div style={{
+              flex: 1, minWidth: "280px", background: "#fff", border: "1px solid #e5e7eb",
+              borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+            }}>
+              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Top Products Ordered</h3>
+              {topProducts.length === 0 ? <p style={{ color: "#9ca3af" }}>No data yet</p> : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={topProducts} layout="vertical" margin={{ left: 10 }}>
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                      {topProducts.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div style={{
+              flex: 1, minWidth: "280px", background: "#fff", border: "1px solid #e5e7eb",
+              borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+            }}>
+              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Orders per Customer</h3>
+              {ordersPerUser.length === 0 ? <p style={{ color: "#9ca3af" }}>No data yet</p> : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={ordersPerUser} margin={{ left: 0 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                      {ordersPerUser.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ORDERS TAB */}
+      {tab === "Orders" && (
+        <div>
+          {/* Filters */}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
+              style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
+              <option value="all">All customers</option>
+              {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+
+          {/* Orders grouped by user */}
+          {Object.keys(ordersByUser).length === 0 ? (
+            <p style={{ color: "#9ca3af" }}>No orders match the filter.</p>
+          ) : (
+            Object.entries(ordersByUser).map(([email, userOrders]) => (
+              <div key={email} style={{ marginBottom: "24px" }}>
+                <h3 style={{ fontSize: "15px", color: "#6b7280", marginBottom: "10px" }}>
+                  {email} — {userOrders.length} order{userOrders.length > 1 ? "s" : ""}
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {userOrders.map(order => (
+                    <div key={order.id} style={{
+                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+                      padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                        <span style={{ fontWeight: 600, color: "#374151" }}>Order #{order.id}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <Badge status={order.status} />
+                          <select value={order.status || "pending"}
+                            onChange={e => handleStatusChange(order.id, e.target.value)}
+                            style={{ padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "13px" }}>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {order.products.map((p, i) => (
+                          <span key={i} style={{
+                            background: "#f9fafb", border: "1px solid #e5e7eb",
+                            borderRadius: "6px", padding: "4px 10px", fontSize: "13px", color: "#374151"
+                          }}>
+                            {p.name} — {p.quantity} {p.unit}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
     </div>
   );
