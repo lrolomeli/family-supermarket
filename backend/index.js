@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 const { Pool } = require("pg");
+const runSetup = require("./db/setup");
 
 // Firebase Admin (solo para verificar tokens de Google)
 admin.initializeApp({
@@ -218,4 +219,7 @@ server.delete("/orders/:orderId/products/:productIndex", authenticate, async (re
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, async () => {
+  await runSetup(pool);
+  console.log(`Server running on port ${PORT}`);
+});
