@@ -56,7 +56,54 @@ const syncUser = async (uid, email) => {
   );
 };
 
-// GET /products - catálogo con precios
+// Verifica si el usuario está aprobado
+const isApproved = async (uid) => {
+  const { rows } = await pool.query("SELECT is_approved, is_admin FROM users WHERE uid = $1", [uid]);
+  if (!rows.length) return false;
+  return rows[0].is_approved || rows[0].is_admin;
+};
+
+// GET /me - verifica si el usuario autenticado está aprobado
+server.get("/me", authenticate, async (req, res) => {
+  try {
+    await syncUser(req.user.uid, req.user.email);
+    const { rows } = await pool.query(
+      "SELECT is_approved, is_admin FROM users WHERE uid = $1",
+      [req.user.uid]
+    );
+    if (!rows.length) return res.status(200).json({ approved: false });
+    res.status(200).json({ approved: rows[0].is_approved || rows[0].is_admin });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /admin/users - listar todos los usuarios (solo admin)
+server.get("/admin/users", authenticate, async (req, res) => {
+  try {
+    const { rows: admin } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!admin.length || !admin[0].is_admin) return res.status(403).send("Unauthorized");
+    const { rows } = await pool.query("SELECT id, uid, email, is_admin, is_approved FROM users ORDER BY id DESC");
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// PATCH /admin/users/:uid/approve - aprobar o rechazar usuario
+server.patch("/admin/users/:uid/approve", authenticate, async (req, res) => {
+  try {
+    const { rows: admin } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!admin.length || !admin[0].is_admin) return res.status(403).send("Unauthorized");
+    const { approved } = req.body;
+    await pool.query("UPDATE users SET is_approved = $1 WHERE uid = $2", [approved, req.params.uid]);
+    res.status(200).send("User updated");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
 server.get("/products", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT * FROM products ORDER BY id");
@@ -173,6 +220,7 @@ server.patch("/admin/orders/:id/status", authenticate, async (req, res) => {
 server.get("/orders", authenticate, async (req, res) => {
   try {
     await syncUser(req.user.uid, req.user.email);
+    if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { rows } = await pool.query(
       "SELECT * FROM orders WHERE uid = $1",
       [req.user.uid]
@@ -188,6 +236,7 @@ server.get("/orders", authenticate, async (req, res) => {
 server.post("/orders", authenticate, async (req, res) => {
   try {
     await syncUser(req.user.uid, req.user.email);
+    if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { products } = req.body;
     const { rows } = await pool.query(
       "INSERT INTO orders (uid, products) VALUES ($1, $2) RETURNING id",

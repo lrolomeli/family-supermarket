@@ -34,7 +34,7 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
   </div>
 );
 
-const TABS = ["Dashboard", "Orders", "Prices"];
+const TABS = ["Dashboard", "Orders", "Users", "Prices"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload }) => {
   const [search, setSearch] = useState("");
@@ -151,6 +151,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState([]);
   const [catalog, setCatalog] = useState([]);
   const [editingPrices, setEditingPrices] = useState({});
   const [tab, setTab] = useState("Dashboard");
@@ -167,8 +168,18 @@ const Admin = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/admin/users`);
+      setUsers(await res.json());
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
+    fetchUsers();
     fetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => {
@@ -179,6 +190,14 @@ const Admin = () => {
       })
       .catch(console.error);
   }, []);
+
+  const handleApprove = async (uid, approved) => {
+    await apiFetch(`${API_BASE_URL}/admin/users/${uid}/approve`, {
+      method: "PATCH",
+      body: JSON.stringify({ approved }),
+    });
+    await fetchUsers();
+  };
 
   const handleStatusChange = async (orderId, status) => {
     await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
@@ -436,6 +455,55 @@ const Admin = () => {
           )}
         </div>
       )}
+      {/* USERS TAB */}
+      {tab === "Users" && (
+        <div>
+          <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
+            Aprueba o rechaza el acceso de cada usuario.
+          </p>
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+              <thead>
+                <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Email</th>
+                  <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Estado</th>
+                  <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u, i) => (
+                  <tr key={u.uid} style={{ borderBottom: i < users.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                    <td style={{ padding: "12px 16px", color: "#374151" }}>
+                      {u.email}
+                      {u.is_admin && <span style={{ marginLeft: "8px", fontSize: "11px", background: "#ede9fe", color: "#7c3aed", padding: "2px 8px", borderRadius: "999px", fontWeight: 600 }}>Admin</span>}
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                      {u.is_approved
+                        ? <span style={{ color: "#22c55e", fontWeight: 600 }}>✓ Aprobado</span>
+                        : <span style={{ color: "#f59e0b", fontWeight: 600 }}>⏳ Pendiente</span>}
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "center", display: "flex", gap: "8px", justifyContent: "center" }}>
+                      {!u.is_approved && (
+                        <button onClick={() => handleApprove(u.uid, true)} style={{
+                          padding: "5px 14px", background: "#22c55e", color: "#fff",
+                          border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 600
+                        }}>Aprobar</button>
+                      )}
+                      {u.is_approved && !u.is_admin && (
+                        <button onClick={() => handleApprove(u.uid, false)} style={{
+                          padding: "5px 14px", background: "#fee2e2", color: "#ef4444",
+                          border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 600
+                        }}>Revocar</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* PRICES TAB */}
       {tab === "Prices" && (
         <PricesTab
