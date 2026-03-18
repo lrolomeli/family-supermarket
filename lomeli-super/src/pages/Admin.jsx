@@ -34,7 +34,15 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
   </div>
 );
 
-const TABS = ["Panel", "Órdenes", "Usuarios", "Productos", "Categorías"];
+const TAB_DISPLAY_NAMES = {
+  "Dashboard": "Panel",
+  "Orders": "Órdenes", 
+  "Users": "Usuarios",
+  "Prices": "Productos",
+  "Categories": "Categorías"
+};
+
+const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
   const [search, setSearch] = useState("");
@@ -719,7 +727,7 @@ const Admin = () => {
             fontWeight: 600, fontSize: "14px",
             background: tab === t ? "#3b82f6" : "#f3f4f6",
             color: tab === t ? "#fff" : "#374151",
-          }}>{t}</button>
+          }}>{TAB_DISPLAY_NAMES[t]}</button>
         ))}
       </div>
 
