@@ -36,11 +36,12 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
 
 const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories"];
 
-const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories }) => {
+const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [csvStatus, setCsvStatus] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: "",
     price_piece: "",
@@ -48,6 +49,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
     category: "general"
   });
   const [imageFile, setImageFile] = useState(null);
+  const [editImageFile, setEditImageFile] = useState(null);
 
   const filtered = catalog.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -89,6 +91,37 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
     if (confirm("¿Estás seguro de eliminar este producto?")) {
       await onDeleteProduct(productId);
     }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct({
+      ...product,
+      price_piece: product.price_piece.toString(),
+      price_kg: product.price_kg.toString()
+    });
+    setEditImageFile(null);
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct.name.trim()) return;
+    
+    try {
+      const updateData = {
+        name: editingProduct.name,
+        category: editingProduct.category
+      };
+      
+      await onUpdateProduct(editingProduct.id, updateData, editImageFile);
+      setEditingProduct(null);
+      setEditImageFile(null);
+    } catch (error) {
+      console.error("Error updating product:", error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+    setEditImageFile(null);
   };
 
   return (
@@ -213,6 +246,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
               <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Producto</th>
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / pieza</th>
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / kg</th>
+              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Categoría</th>
               <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Actions</th>
             </tr>
           </thead>
@@ -235,6 +269,18 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                   />
                 </td>
                 <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                  <span style={{
+                    padding: "4px 8px", background: "#f3f4f6", color: "#374151",
+                    borderRadius: "4px", fontSize: "12px", fontWeight: 500
+                  }}>
+                    {product.category || 'general'}
+                  </span>
+                </td>
+                <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                  <button onClick={() => handleEditProduct(product)} style={{
+                    padding: "4px 14px", background: "#3b82f6", color: "#fff",
+                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
+                  }}>Edit</button>
                   <button onClick={() => onSaveOne(product.id)} style={{
                     padding: "4px 14px", background: "#f3f4f6", color: "#374151",
                     border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
@@ -249,6 +295,83 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
           </tbody>
         </table>
       </div>
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "12px", padding: "24px",
+            maxWidth: "500px", width: "90%", maxHeight: "90vh", overflow: "auto"
+          }}>
+            <h3 style={{ margin: "0 0 20px", fontSize: "18px", fontWeight: 600, color: "#1e293b" }}>
+              Edit Product: {editingProduct.name}
+            </h3>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                  Product Name
+                </label>
+                <input
+                  value={editingProduct.name}
+                  onChange={e => setEditingProduct({...editingProduct, name: e.target.value})}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                  Category
+                </label>
+                <select
+                  value={editingProduct.category || 'general'}
+                  onChange={e => setEditingProduct({...editingProduct, category: e.target.value})}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+                  Product Image (optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setEditImageFile(e.target.files[0])}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+                />
+                {editingProduct.image && (
+                  <div style={{ marginTop: "8px", fontSize: "12px", color: "#6b7280" }}>
+                    Current: {editingProduct.image}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button onClick={handleCancelEdit} style={{
+                  padding: "8px 20px", background: "#f3f4f6", color: "#374151",
+                  border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+                }}>
+                  Cancel
+                </button>
+                <button onClick={handleUpdateProduct} style={{
+                  padding: "8px 20px", background: "#3b82f6", color: "#fff",
+                  border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+                }}>
+                  Update Product
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -488,6 +611,32 @@ const Admin = () => {
     const initial = {};
     updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
     setEditingPrices(initial);
+  };
+
+  const handleUpdateProduct = async (productId, productData, imageFile) => {
+    const formData = new FormData();
+    formData.append("name", productData.name);
+    formData.append("category", productData.category);
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/admin/products/${productId}/details`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (res.ok) {
+      const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+      setCatalog(updated);
+      const initial = {};
+      updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
+      setEditingPrices(initial);
+    } else {
+      throw new Error("Failed to update product");
+    }
   };
 
   const handleAddCategory = async (categoryName) => {
@@ -764,6 +913,7 @@ const Admin = () => {
           onAddProduct={handleAddProduct}
           onDeleteProduct={handleDeleteProduct}
           categories={categories}
+          onUpdateProduct={handleUpdateProduct}
         />
       )}
 
