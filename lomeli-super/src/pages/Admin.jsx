@@ -487,9 +487,20 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
     // Use a default response if admin didn't type anything
     const finalResponse = response.trim() || (status === 'approved' ? 'Aprobado' : 'Rechazado');
     
-    console.log('Submitting response:', { respondingTo, status, finalResponse });
+    console.log('=== SUBMITTING ADMIN RESPONSE ===');
+    console.log('respondingTo:', respondingTo);
+    console.log('status:', status);
+    console.log('finalResponse:', finalResponse);
+    console.log('Current requests count:', requests.length);
     
-    await onRequestResponse(respondingTo, status, finalResponse);
+    try {
+      await onRequestResponse(respondingTo, status, finalResponse);
+      console.log('✅ onRequestResponse completed successfully');
+      console.log('Requests after response:', requests.length);
+    } catch (error) {
+      console.error('❌ Error in submitResponse:', error);
+    }
+    
     setRespondingTo(null);
     setResponse("");
   };
@@ -722,7 +733,11 @@ const Admin = () => {
 
   const handleRequestResponse = async (requestId, status, adminResponse) => {
     try {
-      console.log('Sending admin response:', { requestId, status, adminResponse });
+      console.log('=== HANDLE REQUEST RESPONSE ===');
+      console.log('requestId:', requestId);
+      console.log('status:', status);
+      console.log('adminResponse:', adminResponse);
+      console.log('Current requests before:', requests.length);
       
       const response = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
         method: "PUT",
@@ -741,11 +756,17 @@ const Admin = () => {
       console.log('Admin response success:', responseData);
       
       // Remove the request from the list since it's no longer pending
-      setRequests(prev => prev.filter(req => req.id !== requestId));
+      console.log('Removing request from list...');
+      const newRequests = requests.filter(req => req.id !== requestId);
+      console.log('Requests after filter:', newRequests.length);
+      setRequests(newRequests);
       
+      console.log('Fetching updated orders...');
       await fetchOrders(); // Refresh orders in case status changed
+      
+      console.log('✅ handleRequestResponse completed');
     } catch (error) {
-      console.error("Error responding to request:", error);
+      console.error("❌ Error responding to request:", error);
     }
   };
 
