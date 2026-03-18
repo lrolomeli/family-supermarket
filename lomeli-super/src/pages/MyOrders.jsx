@@ -67,18 +67,21 @@ const MyOrders = () => {
     refreshOrders().catch((e) => console.error("Error fetching orders:", e));
   }, [user]);
 
-  // Add periodic refresh to get latest order status
+  // Refresh orders when page becomes visible (user returns to tab)
   useEffect(() => {
-    if (!user) return;
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        refreshOrders().catch((e) => console.error("Error refreshing orders on visibility change:", e));
+      }
+    };
 
-    const interval = setInterval(() => {
-      refreshOrders().catch((e) => console.error("Error refreshing orders:", e));
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(interval);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
 
   const handleEditClick = (order) => {
+    // Refresh orders before editing to get latest status
+    refreshOrders().catch((e) => console.error("Error refreshing orders before edit:", e));
     setEditingOrderId(order.id);
     setEditedProducts(order.products.map((p) => ({ ...p })));
   };
@@ -95,6 +98,8 @@ const MyOrders = () => {
       setEditedProducts([]);
       setError("");
       setSuccess("");
+      // Refresh after canceling to get latest status
+      refreshOrders().catch((e) => console.error("Error refreshing orders after cancel:", e));
     }
   };
 
@@ -288,24 +293,7 @@ const MyOrders = () => {
 
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h2 style={{ margin: 0 }}>Mis Pedidos</h2>
-        <button 
-          onClick={refreshOrders}
-          style={{
-            padding: "8px 16px", 
-            background: "#f3f4f6", 
-            color: "#374151", 
-            border: "1px solid #d1d5db", 
-            borderRadius: "8px", 
-            cursor: "pointer", 
-            fontSize: "14px",
-            fontWeight: 500
-          }}
-        >
-          🔄 Actualizar
-        </button>
-      </div>
+      <h2 style={{ marginBottom: "20px" }}>Mis Pedidos</h2>
 
       {/* Error and Success Messages */}
       {error && (
