@@ -211,6 +211,52 @@ server.delete("/admin/products/:id", authenticate, async (req, res) => {
   }
 });
 
+// PUT /admin/products/:id/details - update product details (name, image, category)
+server.put("/admin/products/:id/details", authenticate, upload.single("image"), async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { name, category } = req.body;
+    const imagePath = req.file ? `/assets/${req.file.originalname.replace(/\.[^/.]+$/, ".webp")}` : null;
+    
+    // Build dynamic update query
+    let updateFields = [];
+    let updateValues = [];
+    let paramIndex = 1;
+
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex++}`);
+      updateValues.push(name);
+    }
+    if (category !== undefined) {
+      updateFields.push(`category = $${paramIndex++}`);
+      updateValues.push(category);
+    }
+    if (imagePath !== null) {
+      updateFields.push(`image = $${paramIndex++}`);
+      updateValues.push(imagePath);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).send("No fields to update");
+    }
+
+    updateValues.push(req.params.id);
+    
+    const { rows } = await pool.query(
+      `UPDATE products SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      updateValues
+    );
+    
+    if (!rows.length) return res.status(404).send("Product not found");
+    
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 // GET /categories - fetch all categories
 server.get("/categories", async (req, res) => {
   try {
