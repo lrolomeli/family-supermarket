@@ -419,11 +419,13 @@ const MyOrders = () => {
                     ))}
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => handleEditClick(order)} style={{
-                      padding: "6px 16px", background: "#3b82f6", color: "#fff",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>Editar</button>
-                    {order.status !== 'in_progress' && (
+                    {order.status !== 'delivered' && (
+                      <button onClick={() => handleEditClick(order)} style={{
+                        padding: "6px 16px", background: "#3b82f6", color: "#fff",
+                        border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                      }}>Editar</button>
+                    )}
+                    {order.status !== 'in_progress' && order.status !== 'delivered' && (
                       <button onClick={() => handleRemoveOrder(order.id)} style={{
                         padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
                         border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"

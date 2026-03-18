@@ -410,9 +410,14 @@ server.put("/orders/:id", authenticate, async (req, res) => {
     if (!rows.length) return res.status(404).send("Order not found");
     if (rows[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
     
+    // Prevent modification of delivered orders
+    if (rows[0].status === 'delivered') {
+      return res.status(403).send("Cannot modify delivered orders");
+    }
+    
     // Check if order can be modified (only pending orders can be edited)
     if (rows[0].status !== 'pending') {
-      return res.status(403).send("Order cannot be modified - it's already in progress");
+      return res.status(403).send("Order cannot be modified - it's already in progress or delivered");
     }
 
     await pool.query("UPDATE orders SET products = $1 WHERE id = $2", [
@@ -437,9 +442,14 @@ server.delete("/orders/:id", authenticate, async (req, res) => {
     if (!rows.length) return res.status(404).send("Order not found");
     if (rows[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
     
+    // Prevent deletion of delivered orders
+    if (rows[0].status === 'delivered') {
+      return res.status(403).send("Cannot delete delivered orders");
+    }
+    
     // Check if order can be deleted (only pending orders can be deleted)
     if (rows[0].status !== 'pending') {
-      return res.status(403).send("Order cannot be deleted - it's already in progress");
+      return res.status(403).send("Order cannot be deleted - it's already in progress or delivered");
     }
 
     await pool.query("DELETE FROM orders WHERE id = $1", [id]);
@@ -592,6 +602,11 @@ server.post("/orders/:id/requests", authenticate, async (req, res) => {
     );
     if (!order.length) return res.status(404).send("Order not found");
     if (order[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
+    
+    // Prevent requests on delivered orders
+    if (order[0].status === 'delivered') {
+      return res.status(400).send("Cannot modify delivered orders");
+    }
     
     // Only allow requests for in_progress orders (pending orders can be edited directly)
     if (order[0].status !== 'in_progress') {
