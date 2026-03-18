@@ -34,7 +34,7 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
   </div>
 );
 
-const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories"];
+const TABS = ["Panel", "Órdenes", "Usuarios", "Productos", "Categorías"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
   const [search, setSearch] = useState("");
@@ -138,13 +138,13 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
           padding: "7px 18px", background: "#22c55e", color: "#fff",
           border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
         }}>
-          {saving ? "Saving..." : "Save All"}
+          {saving ? "Guardando..." : "Guardar Todo"}
         </button>
         <label style={{
           padding: "7px 18px", background: "#3b82f6", color: "#fff",
           borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
         }}>
-          {csvStatus === "uploading" ? "Uploading..." : "Upload CSV"}
+          {csvStatus === "uploading" ? "Subiendo..." : "Subir CSV"}
           <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
         </label>
         <a
@@ -155,13 +155,13 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
             borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px"
           }}
         >
-          Export CSV
+          Exportar CSV
         </a>
         <button onClick={() => setShowAddForm(!showAddForm)} style={{
           padding: "7px 18px", background: "#8b5cf6", color: "#fff",
           border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
         }}>
-          {showAddForm ? "Cancel" : "Add Product"}
+          {showAddForm ? "Cancelar" : "Agregar Producto"}
         </button>
       </div>
       {csvStatus === "ok" && <p style={{ color: "#22c55e", marginBottom: "10px", fontSize: "13px" }}>✅ CSV importado correctamente</p>}
@@ -174,24 +174,24 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
       {/* Add Product Form */}
       {showAddForm && (
         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Add New Product</h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Agregar Nuevo Producto</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "16px" }}>
             <input
-              placeholder="Product name"
+              placeholder="Nombre del producto"
               value={newProduct.name}
               onChange={e => setNewProduct({...newProduct, name: e.target.value})}
               style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
             />
             <input
               type="number"
-              placeholder="Price per piece"
+              placeholder="Precio por pieza"
               value={newProduct.price_piece}
               onChange={e => setNewProduct({...newProduct, price_piece: e.target.value})}
               style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
             />
             <input
               type="number"
-              placeholder="Price per kg"
+              placeholder="Precio por kg"
               value={newProduct.price_kg}
               onChange={e => setNewProduct({...newProduct, price_kg: e.target.value})}
               style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
@@ -208,7 +208,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
           </div>
           <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-              Product Image (optional)
+              Imagen del Producto (opcional)
             </label>
             <input
               type="file"
@@ -222,7 +222,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
               padding: "8px 20px", background: "#8b5cf6", color: "#fff",
               border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
             }}>
-              Add Product
+              Agregar Producto
             </button>
             <button onClick={() => {
               setShowAddForm(false);
@@ -232,7 +232,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
               padding: "8px 20px", background: "#f3f4f6", color: "#374151",
               border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
             }}>
-              Cancel
+              Cancelar
             </button>
           </div>
         </div>
@@ -247,7 +247,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / pieza</th>
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / kg</th>
               <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Categoría</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Actions</th>
+              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -280,15 +280,15 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                   <button onClick={() => handleEditProduct(product)} style={{
                     padding: "4px 14px", background: "#3b82f6", color: "#fff",
                     border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
-                  }}>Edit</button>
+                  }}>Editar</button>
                   <button onClick={() => onSaveOne(product.id)} style={{
                     padding: "4px 14px", background: "#f3f4f6", color: "#374151",
                     border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
-                  }}>Save</button>
+                  }}>Guardar</button>
                   <button onClick={() => handleDeleteProduct(product.id)} style={{
                     padding: "4px 14px", background: "#fee2e2", color: "#ef4444",
                     border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
-                  }}>Delete</button>
+                  }}>Eliminar</button>
                 </td>
               </tr>
             ))}
@@ -307,13 +307,13 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
             maxWidth: "500px", width: "90%", maxHeight: "90vh", overflow: "auto"
           }}>
             <h3 style={{ margin: "0 0 20px", fontSize: "18px", fontWeight: 600, color: "#1e293b" }}>
-              Edit Product: {editingProduct.name}
+              Editar Producto: {editingProduct.name}
             </h3>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div>
                 <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                  Product Name
+                  Nombre del Producto
                 </label>
                 <input
                   value={editingProduct.name}
@@ -324,7 +324,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
 
               <div>
                 <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                  Category
+                  Categoría
                 </label>
                 <select
                   value={editingProduct.category || categories[0]?.name || 'general'}
@@ -339,7 +339,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
 
               <div>
                 <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                  Product Image (optional)
+                  Imagen del Producto (opcional)
                 </label>
                 <input
                   type="file"
@@ -349,7 +349,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                 />
                 {editingProduct.image && (
                   <div style={{ marginTop: "8px", fontSize: "12px", color: "#6b7280" }}>
-                    Current: {editingProduct.image}
+                    Actual: {editingProduct.image}
                   </div>
                 )}
               </div>
@@ -359,13 +359,13 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                   padding: "8px 20px", background: "#f3f4f6", color: "#374151",
                   border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
                 }}>
-                  Cancel
+                  Cancelar
                 </button>
                 <button onClick={handleUpdateProduct} style={{
                   padding: "8px 20px", background: "#3b82f6", color: "#fff",
                   border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
                 }}>
-                  Update Product
+                  Actualizar Producto
                 </button>
               </div>
             </div>
@@ -400,17 +400,17 @@ const CategoriesTab = ({ categories, onAddCategory }) => {
           padding: "7px 18px", background: "#8b5cf6", color: "#fff",
           border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
         }}>
-          {showAddForm ? "Cancel" : "Add Category"}
+          {showAddForm ? "Cancelar" : "Agregar Categoría"}
         </button>
       </div>
 
       {/* Add Category Form */}
       {showAddForm && (
         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Add New Category</h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Agregar Nueva Categoría</h3>
           <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
             <input
-              placeholder="Category name"
+              placeholder="Nombre de la categoría"
               value={newCategory}
               onChange={e => setNewCategory(e.target.value)}
               style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
@@ -421,7 +421,7 @@ const CategoriesTab = ({ categories, onAddCategory }) => {
               padding: "8px 20px", background: "#8b5cf6", color: "#fff",
               border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
             }}>
-              Add Category
+              Agregar Categoría
             </button>
             <button onClick={() => {
               setShowAddForm(false);
@@ -430,7 +430,7 @@ const CategoriesTab = ({ categories, onAddCategory }) => {
               padding: "8px 20px", background: "#f3f4f6", color: "#374151",
               border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
             }}>
-              Cancel
+              Cancelar
             </button>
           </div>
         </div>
@@ -441,8 +441,8 @@ const CategoriesTab = ({ categories, onAddCategory }) => {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
             <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Category Name</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Product Count</th>
+              <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Nombre de Categoría</th>
+              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Cantidad de Productos</th>
             </tr>
           </thead>
           <tbody>
