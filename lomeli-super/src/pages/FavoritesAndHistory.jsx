@@ -75,8 +75,16 @@ const FavoritesAndHistory = () => {
           loadData();
         }
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || "No se pudo guardar el favorito");
+        let errorMessage = "No se pudo guardar el favorito";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+          // If response is not JSON, get it as text
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+        setError(errorMessage);
       }
     } catch (error) {
       setError("Error de conexión. Intenta nuevamente.");
@@ -111,8 +119,16 @@ const FavoritesAndHistory = () => {
           'success'
         );
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || "No se pudo crear el pedido");
+        let errorMessage = "No se pudo crear el pedido";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+          // If response is not JSON, get it as text
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+        setError(errorMessage);
       }
     } catch (error) {
       setError("Error de conexión. Intenta nuevamente.");
@@ -133,8 +149,16 @@ const FavoritesAndHistory = () => {
         setSuccess("✅ Favorito eliminado exitosamente!");
         setTimeout(() => setSuccess(""), 3000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || "No se pudo eliminar el favorito");
+        let errorMessage = "No se pudo eliminar el favorito";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+          // If response is not JSON, get it as text
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+        setError(errorMessage);
       }
     } catch (error) {
       setError("Error de conexión. Intenta nuevamente.");
