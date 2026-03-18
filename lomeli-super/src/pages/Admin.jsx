@@ -741,7 +741,7 @@ const Admin = () => {
       
       const response = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
         method: "PUT",
-        body: JSON.stringify({ status, admin_response }),
+        body: JSON.stringify({ status, admin_response: adminResponse }),
       });
       
       console.log('Admin response API status:', response.status);
