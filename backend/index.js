@@ -6,6 +6,9 @@ const admin = require("firebase-admin");
 const { Pool } = require("pg");
 const multer = require("multer");
 const { parse } = require("csv-parse/sync");
+const sharp = require("sharp");
+const fs = require("fs");
+const path = require("path");
 const runSetup = require("./db/setup");
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -34,6 +37,30 @@ server.use(express.json());
 
 // Serve static files from frontend public folder
 server.use(express.static('../lomeli-super/public'));
+
+// Image processing helper
+const processImage = async (file, filename) => {
+  try {
+    // Create a unique filename
+    const name = path.parse(filename).name;
+    const webpFilename = `${name}.webp`;
+    const outputPath = path.join(__dirname, '../lomeli-super/public/assets', webpFilename);
+    
+    // Process image: resize to max 800x800, convert to WebP, quality 80%
+    await sharp(file.buffer)
+      .resize(800, 800, { 
+        fit: 'inside',
+        withoutEnlargement: true 
+      })
+      .webp({ quality: 80 })
+      .toFile(outputPath);
+    
+    return `/assets/${webpFilename}`;
+  } catch (error) {
+    console.error('Error processing image:', error);
+    throw error;
+  }
+};
 
 // Middleware: verifica el token de Firebase y adjunta el usuario
 const authenticate = async (req, res, next) => {
@@ -185,7 +212,12 @@ server.post("/admin/products", authenticate, upload.single("image"), async (req,
     if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
 
     const { name, price_piece, price_kg, category } = req.body;
-    const imagePath = req.file ? `/assets/${req.file.originalname.replace(/\.[^/.]+$/, ".webp")}` : null;
+    let imagePath = null;
+    
+    // Process image if uploaded
+    if (req.file) {
+      imagePath = await processImage(req.file, req.file.originalname);
+    }
     
     const { rows } = await pool.query(
       "INSERT INTO products (name, price_piece, price_kg, image, category) VALUES ($1, $2, $3, $4, $5) RETURNING *",
@@ -194,6 +226,7 @@ server.post("/admin/products", authenticate, upload.single("image"), async (req,
     
     res.status(201).json(rows[0]);
   } catch (error) {
+    console.error('Error creating product:', error);
     res.status(500).send(error.message);
   }
 });
@@ -221,7 +254,12 @@ server.put("/admin/products/:id/details", authenticate, upload.single("image"), 
     if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
 
     const { name, category } = req.body;
-    const imagePath = req.file ? `/assets/${req.file.originalname.replace(/\.[^/.]+$/, ".webp")}` : null;
+    let imagePath = null;
+    
+    // Process image if uploaded
+    if (req.file) {
+      imagePath = await processImage(req.file, req.file.originalname);
+    }
     
     // Build dynamic update query
     let updateFields = [];
@@ -256,6 +294,7 @@ server.put("/admin/products/:id/details", authenticate, upload.single("image"), 
     
     res.status(200).json(rows[0]);
   } catch (error) {
+    console.error('Error updating product:', error);
     res.status(500).send(error.message);
   }
 });
