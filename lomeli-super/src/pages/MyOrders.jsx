@@ -27,6 +27,8 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [editedProducts, setEditedProducts] = useState([]);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [productCatalog, setProductCatalog] = useState([]);
 
   useEffect(() => {
@@ -68,28 +70,110 @@ const MyOrders = () => {
   };
 
   const handleSaveEdit = async (orderId) => {
-    const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}`, {
-      method: "PUT",
-      body: JSON.stringify({ products: editedProducts }),
-    });
-    if (response.ok) {
-      setEditingOrderId(null);
-      await refreshOrders();
+    setError("");
+    setSuccess("");
+    
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: "PUT",
+        body: JSON.stringify({ products: editedProducts }),
+      });
+      
+      if (response.ok) {
+        setSuccess("¡Pedido actualizado exitosamente!");
+        setEditingOrderId(null);
+        await refreshOrders();
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(""), 3000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "No se pudo actualizar el pedido");
+      }
+    } catch (error) {
+      setError("Error de conexión. Intenta nuevamente.");
+      console.error("Error updating order:", error);
     }
   };
 
   const handleDeleteProduct = async (orderId, productIndex) => {
-    const response = await apiFetch(
-      `${API_BASE_URL}/orders/${orderId}/products/${productIndex}`,
-      { method: "DELETE" }
-    );
-    if (response.ok) await refreshOrders();
+    setError("");
+    setSuccess("");
+    
+    try {
+      const response = await apiFetch(
+        `${API_BASE_URL}/orders/${orderId}/products/${productIndex}`,
+        { method: "DELETE" }
+      );
+      
+      if (response.ok) {
+        setSuccess("Producto eliminado del pedido");
+        await refreshOrders();
+        setTimeout(() => setSuccess(""), 3000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "No se pudo eliminar el producto");
+      }
+    } catch (error) {
+      setError("Error de conexión. Intenta nuevamente.");
+      console.error("Error deleting product:", error);
+    }
   };
 
   const handleRemoveOrder = async (id) => {
+    setError("");
+    setSuccess("");
+    
     if (!confirm("¿Eliminar este pedido?")) return;
-    const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, { method: "DELETE" });
-    if (response.ok) await refreshOrders();
+    
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, { method: "DELETE" });
+      
+      if (response.ok) {
+        setSuccess("Pedido eliminado exitosamente");
+        await refreshOrders();
+        setTimeout(() => setSuccess(""), 3000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "No se pudo eliminar el pedido");
+      }
+    } catch (error) {
+      setError("Error de conexión. Intenta nuevamente.");
+      console.error("Error deleting order:", error);
+    }
+  };
+
+  const handleRequestChange = async (orderId, requestType = "modify") => {
+    const message = prompt(
+      requestType === "cancel" 
+        ? "¿Por qué necesitas cancelar este pedido?" 
+        : "Describe los cambios que necesitas en tu pedido:"
+    );
+    if (!message || !message.trim()) return;
+    
+    setError("");
+    setSuccess("");
+    
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}/requests`, {
+        method: "POST",
+        body: JSON.stringify({
+          request_type: requestType,
+          message: message.trim()
+        }),
+      });
+      
+      if (response.ok) {
+        setSuccess("✅ Solicitud enviada al administrador. Te notificaremos cuando responda.");
+        setTimeout(() => setSuccess(""), 5000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "No se pudo enviar la solicitud");
+      }
+    } catch (error) {
+      setError("Error de conexión. Intenta nuevamente.");
+      console.error("Error requesting change:", error);
+    }
   };
 
   const getProductImage = (name) => {
@@ -100,6 +184,25 @@ const MyOrders = () => {
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px" }}>
       <h2 style={{ marginBottom: "20px" }}>Mis Pedidos</h2>
+
+      {/* Error and Success Messages */}
+      {error && (
+        <div style={{
+          marginBottom: "16px", padding: "12px 16px", borderRadius: "8px",
+          backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626"
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+      
+      {success && (
+        <div style={{
+          marginBottom: "16px", padding: "12px 16px", borderRadius: "8px",
+          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a"
+        }}>
+          ✅ {success}
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <div style={{
@@ -186,14 +289,29 @@ const MyOrders = () => {
                     ))}
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => handleEditClick(order)} style={{
-                      padding: "6px 16px", background: "#3b82f6", color: "#fff",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>Editar</button>
-                    <button onClick={() => handleRemoveOrder(order.id)} style={{
-                      padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>Eliminar</button>
+                    {order.status === 'in_progress' ? (
+                      <>
+                        <button onClick={() => handleRequestChange(order.id)} style={{
+                          padding: "6px 16px", background: "#f59e0b", color: "#fff",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                        }}>Solicitar Cambio</button>
+                        <button onClick={() => handleRequestChange(order.id, "cancel")} style={{
+                          padding: "6px 16px", background: "#ef4444", color: "#fff",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                        }}>Solicitar Cancelación</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => handleEditClick(order)} style={{
+                          padding: "6px 16px", background: "#3b82f6", color: "#fff",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                        }}>Editar</button>
+                        <button onClick={() => handleRemoveOrder(order.id)} style={{
+                          padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                        }}>Eliminar</button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
