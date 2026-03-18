@@ -83,6 +83,16 @@ const MyOrders = () => {
     setError("");
     setSuccess("");
     
+    // Find the order to check its status
+    const order = orders.find(o => o.id === orderId);
+    
+    // If order is in progress, send as a request instead of updating directly
+    if (order && order.status === 'in_progress') {
+      await handleRequestChange(orderId, 'modify', editedProducts);
+      return;
+    }
+    
+    // Normal save for pending orders
     try {
       const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}`, {
         method: "PUT",
@@ -167,7 +177,7 @@ const MyOrders = () => {
     }
   };
 
-  const handleRequestChange = async (orderId, requestType = "modify") => {
+  const handleRequestChange = async (orderId, requestType = "modify", editedProductsData = null) => {
     // Check if there's already a pending request for this order
     try {
       const checkResponse = await apiFetch(`${API_BASE_URL}/orders/${orderId}/requests`);
@@ -183,12 +193,42 @@ const MyOrders = () => {
       console.error("Error checking existing requests:", error);
     }
 
-    const message = prompt(
-      requestType === "cancel" 
-        ? "¿Por qué necesitas cancelar este pedido?" 
-        : "Describe los cambios que necesitas en tu pedido:"
-    );
-    if (!message || !message.trim()) return;
+    let message = "";
+    
+    if (requestType === "modify" && editedProductsData) {
+      // Create detailed message about the changes
+      const order = orders.find(o => o.id === orderId);
+      const changes = [];
+      
+      editedProductsData.forEach((newProduct, index) => {
+        const oldProduct = order?.products?.find(p => p.name === newProduct.name);
+        if (oldProduct) {
+          if (oldProduct.quantity !== newProduct.quantity || oldProduct.unit !== newProduct.unit) {
+            changes.push(`${newProduct.name}: ${oldProduct.quantity} ${oldProduct.unit} → ${newProduct.quantity} ${newProduct.unit}`);
+          }
+        } else {
+          changes.push(`+ ${newProduct.name}: ${newProduct.quantity} ${newProduct.unit}`);
+        }
+      });
+      
+      // Check for removed products
+      order?.products?.forEach(oldProduct => {
+        const exists = editedProductsData.find(p => p.name === oldProduct.name);
+        if (!exists) {
+          changes.push(`- ${oldProduct.name}: ${oldProduct.quantity} ${oldProduct.unit}`);
+        }
+      });
+      
+      message = changes.length > 0 ? changes.join(', ') : "No se detectaron cambios";
+    } else {
+      // Regular request with prompt
+      message = prompt(
+        requestType === "cancel" 
+          ? "¿Por qué necesitas cancelar este pedido?" 
+          : "Describe los cambios que necesitas en tu pedido:"
+      );
+      if (!message || !message.trim()) return;
+    }
     
     setError("");
     setSuccess("");
@@ -198,13 +238,19 @@ const MyOrders = () => {
         method: "POST",
         body: JSON.stringify({
           request_type: requestType,
-          message: message.trim()
+          message: message.trim(),
+          proposed_changes: editedProductsData || null
         }),
       });
       
       if (response.ok) {
-        setSuccess("✅ Solicitud enviada al administrador. Te notificaremos cuando responda.");
-        setTimeout(() => setSuccess(""), 5000);
+        if (requestType === "modify" && editedProductsData) {
+          setSuccess("✅ Los cambios fueron enviados al administrador. Si los aprueba, tu pedido será actualizado. Contacta al administrador para agilizar el proceso.");
+          setEditingOrderId(null); // Exit edit mode after sending request
+        } else {
+          setSuccess("✅ Solicitud enviada al administrador. Te notificaremos cuando responda.");
+        }
+        setTimeout(() => setSuccess(""), 6000);
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo enviar la solicitud");
@@ -328,28 +374,15 @@ const MyOrders = () => {
                     ))}
                   </div>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    {order.status === 'in_progress' ? (
-                      <>
-                        <button onClick={() => handleRequestChange(order.id)} style={{
-                          padding: "6px 16px", background: "#f59e0b", color: "#fff",
-                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                        }}>Solicitar Cambio</button>
-                        <button onClick={() => handleRequestChange(order.id, "cancel")} style={{
-                          padding: "6px 16px", background: "#ef4444", color: "#fff",
-                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                        }}>Solicitar Cancelación</button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => handleEditClick(order)} style={{
-                          padding: "6px 16px", background: "#3b82f6", color: "#fff",
-                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                        }}>Editar</button>
-                        <button onClick={() => handleRemoveOrder(order.id)} style={{
-                          padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
-                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                        }}>Eliminar</button>
-                      </>
+                    <button onClick={() => handleEditClick(order)} style={{
+                      padding: "6px 16px", background: "#3b82f6", color: "#fff",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                    }}>Editar</button>
+                    {order.status !== 'in_progress' && (
+                      <button onClick={() => handleRemoveOrder(order.id)} style={{
+                        padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
+                        border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                      }}>Eliminar</button>
                     )}
                   </div>
                 </div>

@@ -582,7 +582,7 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
 // POST /orders/:id/requests - create order request (user only)
 server.post("/orders/:id/requests", authenticate, async (req, res) => {
   try {
-    const { request_type, message } = req.body;
+    const { request_type, message, proposed_changes } = req.body;
     const orderId = req.params.id;
     
     // Verify order belongs to user
@@ -599,8 +599,8 @@ server.post("/orders/:id/requests", authenticate, async (req, res) => {
     }
     
     const { rows } = await pool.query(
-      "INSERT INTO order_requests (order_id, uid, request_type, message) VALUES ($1, $2, $3, $4) RETURNING *",
-      [orderId, req.user.uid, request_type, message]
+      "INSERT INTO order_requests (order_id, uid, request_type, message, proposed_changes) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [orderId, req.user.uid, request_type, message, JSON.stringify(proposed_changes)]
     );
     
     res.status(201).json(rows[0]);
@@ -644,18 +644,40 @@ server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
       return res.status(400).send("Invalid status");
     }
 
+    // Get the request details to check for proposed changes
+    const { rows: request } = await pool.query(
+      "SELECT * FROM order_requests WHERE id = $1",
+      [req.params.id]
+    );
+    
+    if (!request.length) return res.status(404).send("Request not found");
+    
     const { rows } = await pool.query(
       "UPDATE order_requests SET status = $1, admin_response = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *",
       [status, admin_response, req.params.id]
     );
     
-    if (!rows.length) return res.status(404).send("Request not found");
-    
-    // If approved, temporarily allow user to modify the order
+    // If approved, apply the proposed changes and allow user to modify
     if (status === 'approved') {
+      const requestData = request[0];
+      
+      // If there are proposed changes, apply them to the order
+      if (requestData.proposed_changes) {
+        try {
+          const proposedChanges = JSON.parse(requestData.proposed_changes);
+          await pool.query(
+            "UPDATE orders SET products = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+            [JSON.stringify(proposedChanges), requestData.order_id]
+          );
+        } catch (parseError) {
+          console.error("Error parsing proposed changes:", parseError);
+        }
+      }
+      
+      // Set order back to pending so user can edit if needed
       await pool.query(
-        "UPDATE orders SET status = 'pending' WHERE id = (SELECT order_id FROM order_requests WHERE id = $1)",
-        [req.params.id]
+        "UPDATE orders SET status = 'pending' WHERE id = $1",
+        [requestData.order_id]
       );
     }
     
