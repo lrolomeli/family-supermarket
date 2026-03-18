@@ -2,13 +2,12 @@ import React, { useEffect, useState } from "react";
 import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
-import productCatalog from "../data/products";
 import { calcOrderTotal, formatMXN } from "../utils/pricing";
 
 const STATUS_COLORS = {
-  pending:   { bg: "#fff8e1", color: "#f59e0b", label: "Pending" },
-  completed: { bg: "#e8f5e9", color: "#22c55e", label: "Completed" },
-  cancelled: { bg: "#fce4ec", color: "#ef4444", label: "Cancelled" },
+  pending:   { bg: "#fff8e1", color: "#f59e0b", label: "Pendiente" },
+  completed: { bg: "#e8f5e9", color: "#22c55e", label: "Completado" },
+  cancelled: { bg: "#fce4ec", color: "#ef4444", label: "Cancelado" },
 };
 
 const StatusBadge = ({ status = "pending" }) => {
@@ -28,7 +27,15 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [editedProducts, setEditedProducts] = useState([]);
-  const [catalog, setCatalog] = useState([]);
+  const [productCatalog, setProductCatalog] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/products`)
+      .then(r => r.json())
+      .then(data => setProductCatalog(data))
+      .catch(console.error);
+  }, []);
+
   const user = auth.currentUser;
 
   const refreshOrders = async () => {
@@ -40,10 +47,6 @@ const MyOrders = () => {
   useEffect(() => {
     if (!user) return;
     refreshOrders().catch((e) => console.error("Error fetching orders:", e));
-    fetch(`${API_BASE_URL}/products`)
-      .then(r => r.json())
-      .then(setCatalog)
-      .catch(console.error);
   }, [user]);
 
   const handleEditClick = (order) => {
@@ -84,26 +87,26 @@ const MyOrders = () => {
   };
 
   const handleRemoveOrder = async (id) => {
-    if (!confirm("Remove this order?")) return;
+    if (!confirm("¿Eliminar este pedido?")) return;
     const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, { method: "DELETE" });
     if (response.ok) await refreshOrders();
   };
 
   const getProductImage = (name) => {
     const found = productCatalog.find((p) => p.name === name);
-    return found ? found.image : null;
+    return found ? (found.image || '/assets/default-product.svg') : '/assets/default-product.svg';
   };
 
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px" }}>
-      <h2 style={{ marginBottom: "20px" }}>My Orders</h2>
+      <h2 style={{ marginBottom: "20px" }}>Mis Pedidos</h2>
 
       {orders.length === 0 ? (
         <div style={{
           textAlign: "center", padding: "48px", background: "#f9f9f9",
           borderRadius: "12px", color: "#888"
         }}>
-          <p style={{ fontSize: "18px" }}>No orders yet.</p>
+          <p style={{ fontSize: "18px" }}>Aún no tienes pedidos.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -115,11 +118,11 @@ const MyOrders = () => {
             }}>
               {/* Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                <span style={{ fontWeight: 600, color: "#374151" }}>Order #{order.id}</span>
+                <span style={{ fontWeight: 600, color: "#374151" }}>Pedido #{order.id}</span>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  {catalog.length > 0 && (
+                  {productCatalog.length > 0 && (
                     <span style={{ fontWeight: 700, color: "#22c55e", fontSize: "15px" }}>
-                      {formatMXN(calcOrderTotal(order.products, catalog))}
+                      {formatMXN(calcOrderTotal(order.products, productCatalog))}
                     </span>
                   )}
                   <StatusBadge status={order.status} />
@@ -134,10 +137,8 @@ const MyOrders = () => {
                       display: "flex", alignItems: "center", gap: "10px",
                       padding: "8px 0", borderBottom: "1px solid #f3f4f6"
                     }}>
-                      {getProductImage(product.name) && (
-                        <img src={getProductImage(product.name)} alt={product.name}
-                          style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover" }} />
-                      )}
+                      <img src={getProductImage(product.name)} alt={product.name}
+                        style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover" }} />
                       <span style={{ flex: 1, fontSize: "14px" }}>{product.name}</span>
                       <input
                         type="number" min="1" value={product.quantity}
@@ -149,7 +150,7 @@ const MyOrders = () => {
                         onChange={(e) => handleProductChange(index, "unit", e.target.value)}
                         style={{ padding: "4px", borderRadius: "6px", border: "1px solid #d1d5db" }}
                       >
-                        <option value="pieces">pcs</option>
+                        <option value="pieces">pzs</option>
                         <option value="kg">kg</option>
                       </select>
                       <button onClick={() => handleDeleteProduct(order.id, index)}
@@ -161,11 +162,11 @@ const MyOrders = () => {
                     <button onClick={() => handleSaveEdit(order.id)} style={{
                       padding: "7px 18px", background: "#22c55e", color: "#fff",
                       border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600
-                    }}>Save</button>
+                    }}>Guardar</button>
                     <button onClick={handleCancelEdit} style={{
                       padding: "7px 18px", background: "#f3f4f6", color: "#374151",
                       border: "none", borderRadius: "8px", cursor: "pointer"
-                    }}>Cancel</button>
+                    }}>Cancelar</button>
                   </div>
                 </div>
               ) : (
@@ -176,10 +177,8 @@ const MyOrders = () => {
                         display: "flex", alignItems: "center", gap: "8px",
                         background: "#f9fafb", borderRadius: "8px", padding: "6px 10px"
                       }}>
-                        {getProductImage(product.name) && (
-                          <img src={getProductImage(product.name)} alt={product.name}
+                        <img src={getProductImage(product.name)} alt={product.name}
                             style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }} />
-                        )}
                         <span style={{ fontSize: "13px", color: "#374151" }}>
                           {product.name} — {product.quantity} {product.unit}
                         </span>
@@ -190,11 +189,11 @@ const MyOrders = () => {
                     <button onClick={() => handleEditClick(order)} style={{
                       padding: "6px 16px", background: "#3b82f6", color: "#fff",
                       border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>Edit</button>
+                    }}>Editar</button>
                     <button onClick={() => handleRemoveOrder(order.id)} style={{
                       padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
                       border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>Remove</button>
+                    }}>Eliminar</button>
                   </div>
                 </div>
               )}

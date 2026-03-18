@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { auth } from "../firebase";
-import products from "../data/products";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 
@@ -32,7 +31,7 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
         <div style={{ width: "40px", height: "4px", background: "#e5e7eb", borderRadius: "2px", margin: "0 auto 20px" }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-          <img src={product.image} alt={product.name}
+          <img src={product.image || '/assets/default-product.svg'} alt={product.name}
             style={{ width: "64px", height: "64px", borderRadius: "12px", objectFit: "cover" }} />
           <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#15803d" }}>{product.name}</h3>
         </div>
@@ -88,6 +87,14 @@ const Order = () => {
   const [cart, setCart] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/products`)
+      .then(r => r.json())
+      .then(data => setProducts(data))
+      .catch(console.error);
+  }, []);
 
   const handleAddToCart = (product, quantity, unit) => {
     setCart(prev => {
@@ -161,7 +168,7 @@ const Order = () => {
                   {cart.filter(i => i.id === product.id).reduce((a, i) => a + i.quantity, 0)}
                 </span>
               )}
-              <img src={product.image} alt={product.name}
+              <img src={product.image || '/assets/default-product.svg'} alt={product.name}
                 style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "10px" }} />
               <span style={{
                 marginTop: "6px", fontSize: "12px", fontWeight: 600,
