@@ -476,6 +476,7 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
   const [response, setResponse] = useState("");
 
   const handleRespond = (request) => {
+    console.log('Opening response form for request:', request.id, request);
     setRespondingTo(request.id);
     setResponse("");
   };
@@ -483,7 +484,12 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
   const submitResponse = async (status) => {
     if (!respondingTo) return;
     
-    await onRequestResponse(respondingTo, status, response);
+    // Use a default response if admin didn't type anything
+    const finalResponse = response.trim() || (status === 'approved' ? 'Aprobado' : 'Rechazado');
+    
+    console.log('Submitting response:', { respondingTo, status, finalResponse });
+    
+    await onRequestResponse(respondingTo, status, finalResponse);
     setRespondingTo(null);
     setResponse("");
   };
