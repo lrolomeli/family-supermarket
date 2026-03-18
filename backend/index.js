@@ -605,17 +605,19 @@ server.post("/orders/:id/requests", authenticate, async (req, res) => {
     );
     
     let result;
+    const proposedChangesJson = proposed_changes ? JSON.stringify(proposed_changes) : null;
+    
     if (existingRequest.length > 0) {
       // Replace existing pending request
       result = await pool.query(
         "UPDATE order_requests SET request_type = $1, message = $2, proposed_changes = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *",
-        [request_type, message, JSON.stringify(proposed_changes), existingRequest[0].id]
+        [request_type, message, proposedChangesJson, existingRequest[0].id]
       );
     } else {
       // Create new request
       result = await pool.query(
         "INSERT INTO order_requests (order_id, uid, request_type, message, proposed_changes) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-        [orderId, req.user.uid, request_type, message, JSON.stringify(proposed_changes)]
+        [orderId, req.user.uid, request_type, message, proposedChangesJson]
       );
     }
     
@@ -680,13 +682,25 @@ server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
       // If there are proposed changes, apply them to the order
       if (requestData.proposed_changes) {
         try {
-          const proposedChanges = JSON.parse(requestData.proposed_changes);
+          let proposedChanges;
+          // Handle different formats of proposed_changes
+          if (typeof requestData.proposed_changes === 'string') {
+            proposedChanges = JSON.parse(requestData.proposed_changes);
+          } else {
+            proposedChanges = requestData.proposed_changes;
+          }
+          
+          console.log('Applying proposed changes:', proposedChanges);
+          
           await pool.query(
             "UPDATE orders SET products = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
             [JSON.stringify(proposedChanges), requestData.order_id]
           );
+          
+          console.log('Successfully updated order products');
         } catch (parseError) {
           console.error("Error parsing proposed changes:", parseError);
+          console.error("Raw proposed_changes:", requestData.proposed_changes);
         }
       }
       
@@ -695,6 +709,8 @@ server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
         "UPDATE orders SET status = 'pending' WHERE id = $1",
         [requestData.order_id]
       );
+      
+      console.log('Updated order status to pending');
     }
     
     res.status(200).json(rows[0]);
