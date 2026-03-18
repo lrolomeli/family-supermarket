@@ -56,6 +56,35 @@ const MyOrders = () => {
     setNotification(null);
   };
 
+  const handleSaveAsFavorite = async (order) => {
+    const name = prompt("¿Cómo quieres llamar a este pedido favorito?");
+    if (!name || !name.trim()) return;
+    
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/favorites`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          products: order.products
+        }),
+      });
+      
+      if (response.ok) {
+        showNotification(
+          "Favorito Guardado",
+          "Este pedido ha sido guardado en tus favoritos para poder pedirlo nuevamente.",
+          'success'
+        );
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "No se pudo guardar el favorito");
+      }
+    } catch (error) {
+      setError("Error de conexión. Intenta nuevamente.");
+      console.error("Error saving favorite:", error);
+    }
+  };
+
   const refreshOrders = async () => {
     const response = await apiFetch(`${API_BASE_URL}/orders`);
     const data = await response.json();
@@ -425,6 +454,10 @@ const MyOrders = () => {
                         border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
                       }}>Editar</button>
                     )}
+                    <button onClick={() => handleSaveAsFavorite(order)} style={{
+                      padding: "6px 16px", background: "#f59e0b", color: "#fff",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                    }}>⭐ Favorito</button>
                     {order.status !== 'in_progress' && order.status !== 'delivered' && (
                       <button onClick={() => handleRemoveOrder(order.id)} style={{
                         padding: "6px 16px", background: "#fee2e2", color: "#ef4444",

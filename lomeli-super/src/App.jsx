@@ -9,6 +9,7 @@ import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import Order from "./pages/Order";
 import MyOrders from "./pages/MyOrders";
+import FavoritesAndHistory from "./pages/FavoritesAndHistory";
 import Admin from "./pages/Admin";
 import API_BASE_URL from "./config";
 import apiFetch from "./api";
@@ -75,6 +76,7 @@ const App = () => {
         } />
         <Route path="/order" element={<PrivateRoute><Order /></PrivateRoute>} />
         <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
+        <Route path="/favorites" element={<PrivateRoute><FavoritesAndHistory /></PrivateRoute>} />
         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
       </Routes>
     </Router>

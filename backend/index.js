@@ -787,6 +787,98 @@ server.delete("/admin/requests/cleanup", authenticate, async (req, res) => {
   }
 });
 
+// ORDER FAVORITES API
+
+// GET /favorites - get user's favorite orders
+server.get("/favorites", authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM order_favorites WHERE uid = $1 ORDER BY created_at DESC",
+      [req.user.uid]
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching favorites:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /favorites - create new favorite order
+server.post("/favorites", authenticate, async (req, res) => {
+  try {
+    const { name, products } = req.body;
+    
+    if (!name || !products) {
+      return res.status(400).send("Name and products are required");
+    }
+    
+    const { rows } = await pool.query(
+      "INSERT INTO order_favorites (uid, name, products) VALUES ($1, $2, $3) RETURNING *",
+      [req.user.uid, name, JSON.stringify(products)]
+    );
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("Error creating favorite:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// DELETE /favorites/:id - delete favorite order
+server.delete("/favorites/:id", authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "DELETE FROM order_favorites WHERE id = $1 AND uid = $2 RETURNING *",
+      [req.params.id, req.user.uid]
+    );
+    
+    if (!rows.length) return res.status(404).send("Favorite not found");
+    
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error deleting favorite:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /favorites/:id/reorder - create new order from favorite
+server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
+  try {
+    // Get the favorite order
+    const { rows: favorite } = await pool.query(
+      "SELECT * FROM order_favorites WHERE id = $1 AND uid = $2",
+      [req.params.id, req.user.uid]
+    );
+    
+    if (!favorite.length) return res.status(404).send("Favorite not found");
+    
+    // Create new order from favorite
+    const { rows } = await pool.query(
+      "INSERT INTO orders (uid, products, status, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *",
+      [req.user.uid, favorite[0].products, 'pending']
+    );
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("Error creating order from favorite:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /orders/history - get user's order history (all orders)
+server.get("/orders/history", authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE uid = $1 ORDER BY created_at DESC",
+      [req.user.uid]
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching order history:", error);
+    res.status(500).send(error.message);
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, async () => {
   await runSetup(pool);
