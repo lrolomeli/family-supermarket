@@ -12,8 +12,22 @@ const FavoritesAndHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [notification, setNotification] = useState(null);
 
   const user = auth.currentUser;
+
+  const showNotification = (title, message, type = 'success') => {
+    setNotification({
+      title,
+      message,
+      type,
+      timestamp: new Date()
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification(null);
+  };
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/products`)
@@ -419,6 +433,48 @@ const FavoritesAndHistory = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+      
+      {/* Notification Display */}
+      {notification && (
+        <div style={{
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          background: notification.type === 'success' ? "#f0fdf4" : 
+                     notification.type === 'error' ? "#fef2f2" : "#eff6ff",
+          border: `1px solid ${notification.type === 'success' ? "#bbf7d0" : 
+                           notification.type === 'error' ? "#fecaca" : "#bfdbfe"}`,
+          color: notification.type === 'success' ? "#166a34" : 
+                 notification.type === 'error' ? "#dc2626" : "#1e40af",
+          padding: "16px 20px",
+          borderRadius: "8px",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          maxWidth: "300px",
+          zIndex: 1000
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: "4px" }}>
+            {notification.title}
+          </div>
+          <div style={{ fontSize: "14px" }}>
+            {notification.message}
+          </div>
+          <button
+            onClick={closeNotification}
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "8px",
+              background: "none",
+              border: "none",
+              fontSize: "16px",
+              cursor: "pointer",
+              color: "inherit"
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
     </div>
