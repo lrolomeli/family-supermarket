@@ -38,8 +38,9 @@ const server = express();
 server.use(cors());
 server.use(express.json());
 
-// Serve static files from frontend public folder
-server.use(express.static('../lomeli-super/public'));
+// Serve static files - use ASSETS_DIR env var for Docker, fallback for local dev
+const ASSETS_DIR = process.env.ASSETS_DIR || path.join(__dirname, '../lomeli-super/public');
+server.use(express.static(ASSETS_DIR));
 
 // Image processing helper
 const processImage = async (file, filename) => {
@@ -47,7 +48,7 @@ const processImage = async (file, filename) => {
     // Create a unique filename
     const name = path.parse(filename).name;
     const webpFilename = `${name}.webp`;
-    const outputPath = path.join(__dirname, '../lomeli-super/public/assets', webpFilename);
+    const outputPath = path.join(ASSETS_DIR, 'assets', webpFilename);
     
     // Process image: resize to max 800x800, convert to WebP, quality 80%
     await sharp(file.buffer)
