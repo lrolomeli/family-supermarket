@@ -1,13 +1,20 @@
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
+import { clearLocalAuth } from "../api";
 
 const Navbar = ({ user, isAdmin }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/login");
+    if (user?.isLocal) {
+      clearLocalAuth();
+      navigate("/login");
+      window.location.reload();
+    } else {
+      await signOut(auth);
+      navigate("/login");
+    }
   };
 
   return (
@@ -16,7 +23,7 @@ const Navbar = ({ user, isAdmin }) => {
       <Link to="/my-orders">Mis Ordenes</Link>
       <Link to="/favorites">⭐ Favoritos</Link>
       {isAdmin && <Link to="/admin">Admin</Link>}
-      <span style={{ marginLeft: "auto" }}>{user?.email}</span>
+      <span style={{ marginLeft: "auto" }}>{user?.displayName || user?.email}</span>
       <button onClick={handleLogout}>Cerrar sesión</button>
     </nav>
   );

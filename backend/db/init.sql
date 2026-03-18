@@ -2,6 +2,9 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   uid VARCHAR(255) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255),
+  display_name VARCHAR(255),
+  auth_type VARCHAR(20) DEFAULT 'google',
   is_admin BOOLEAN DEFAULT FALSE,
   is_approved BOOLEAN DEFAULT FALSE
 );
@@ -51,4 +54,14 @@ CREATE TABLE IF NOT EXISTS order_requests (
   proposed_changes JSONB,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invitations (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(64) UNIQUE NOT NULL,
+  created_by VARCHAR(255) NOT NULL,
+  used_by VARCHAR(255),
+  used_at TIMESTAMP,
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -11,6 +11,7 @@ import Order from "./pages/Order";
 import MyOrders from "./pages/MyOrders";
 import FavoritesAndHistory from "./pages/FavoritesAndHistory";
 import Admin from "./pages/Admin";
+import Register from "./pages/Register";
 import API_BASE_URL from "./config";
 import apiFetch from "./api";
 
@@ -21,13 +22,31 @@ const App = () => {
   const [approved, setApproved] = useState(undefined);
 
   useEffect(() => {
+    // Check for local user first
+    const localUser = localStorage.getItem("local_user");
+    if (localUser) {
+      try {
+        const parsed = JSON.parse(localUser);
+        setUser({ email: parsed.email, uid: parsed.uid, displayName: parsed.display_name, isLocal: true });
+        // Verify with backend
+        apiFetch(`${API_BASE_URL}/me`)
+          .then(r => r.json())
+          .then(data => setApproved(data.approved))
+          .catch(() => setApproved(false));
+        return;
+      } catch (e) {
+        localStorage.removeItem("local_user");
+        localStorage.removeItem("local_token");
+      }
+    }
+
+    // Firebase auth listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser ?? null);
       if (firebaseUser) {
         try {
           const res = await apiFetch(`${API_BASE_URL}/me`);
           const data = await res.json();
-          console.log("/me response:", data);
           setApproved(data.approved);
         } catch (e) {
           console.error("/me error:", e);
@@ -43,9 +62,10 @@ const App = () => {
   if (user === undefined || (user && approved === undefined)) return <p>Cargando...</p>;
 
   const isAdmin = user?.email === ADMIN_EMAIL;
+  const isLoggedIn = !!user;
 
   const PrivateRoute = ({ children }) => {
-    if (!user) return <Navigate to="/login" replace />;
+    if (!isLoggedIn) return <Navigate to="/login" replace />;
     if (approved === false) return <Navigate to="/pending" replace />;
     return (
       <>
@@ -67,9 +87,10 @@ const App = () => {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={user ? <Navigate to="/order" replace /> : <Login />} />
+        <Route path="/login" element={isLoggedIn ? <Navigate to="/order" replace /> : <Login />} />
+        <Route path="/register/:code" element={isLoggedIn ? <Navigate to="/order" replace /> : <Register />} />
         <Route path="/pending" element={
-          !user ? <Navigate to="/login" replace /> :
+          !isLoggedIn ? <Navigate to="/login" replace /> :
           approved ? <Navigate to="/order" replace /> :
           <Pending />
         } />

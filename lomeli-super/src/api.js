@@ -5,6 +5,11 @@ let tokenExpiry = null;
 
 // Refresca el token solo si está por expirar (margen de 5 minutos)
 const getToken = async () => {
+  // Check for local token first
+  const localToken = localStorage.getItem("local_token");
+  if (localToken) return localToken;
+
+  // Firebase token
   const now = Date.now();
   if (cachedToken && tokenExpiry && now < tokenExpiry - 5 * 60 * 1000) {
     return cachedToken;
@@ -12,7 +17,7 @@ const getToken = async () => {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
   cachedToken = await user.getIdToken(true);
-  tokenExpiry = now + 60 * 60 * 1000; // tokens de Firebase duran 1 hora
+  tokenExpiry = now + 60 * 60 * 1000;
   return cachedToken;
 };
 
@@ -20,6 +25,14 @@ const getToken = async () => {
 export const primeToken = async () => {
   cachedToken = null;
   await getToken();
+};
+
+// Limpia tokens locales al hacer logout
+export const clearLocalAuth = () => {
+  localStorage.removeItem("local_token");
+  localStorage.removeItem("local_user");
+  cachedToken = null;
+  tokenExpiry = null;
 };
 
 const apiFetch = async (url, options = {}) => {

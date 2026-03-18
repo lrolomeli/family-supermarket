@@ -9,6 +9,9 @@ const { parse } = require("csv-parse/sync");
 const sharp = require("sharp");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const runSetup = require("./db/setup");
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -62,7 +65,9 @@ const processImage = async (file, filename) => {
   }
 };
 
-// Middleware: verifica el token de Firebase y adjunta el usuario
+const JWT_SECRET = process.env.JWT_SECRET || "lomeli-super-secret-key-change-in-production";
+
+// Middleware: verifica el token (Firebase o JWT local)
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -70,8 +75,19 @@ const authenticate = async (req, res, next) => {
   }
   try {
     const token = authHeader.split("Bearer ")[1];
-    const decoded = await admin.auth().verifyIdToken(token);
-    req.user = decoded; // { uid, email, ... }
+    
+    // Try Firebase token first
+    try {
+      const decoded = await admin.auth().verifyIdToken(token);
+      req.user = decoded; // { uid, email, ... }
+      return next();
+    } catch (firebaseErr) {
+      // Not a Firebase token, try local JWT
+    }
+    
+    // Try local JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = { uid: decoded.uid, email: decoded.email };
     next();
   } catch (error) {
     return res.status(401).send("Unauthorized: Invalid token");
@@ -92,6 +108,141 @@ const isApproved = async (uid) => {
   if (!rows.length) return false;
   return rows[0].is_approved || rows[0].is_admin;
 };
+
+// === INVITATION & LOCAL AUTH ===
+
+// POST /admin/invitations - create invitation link (admin only)
+server.post("/admin/invitations", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const code = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const { rows } = await pool.query(
+      "INSERT INTO invitations (code, created_by, expires_at) VALUES ($1, $2, $3) RETURNING *",
+      [code, req.user.uid, expiresAt]
+    );
+
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("Error creating invitation:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /admin/invitations - list all invitations (admin only)
+server.get("/admin/invitations", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { rows } = await pool.query(
+      "SELECT i.*, u.email as used_by_email FROM invitations i LEFT JOIN users u ON i.used_by = u.uid ORDER BY i.created_at DESC"
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching invitations:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /invitations/:code/validate - check if invitation is valid (public)
+server.get("/invitations/:code/validate", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT id, code, expires_at, used_by FROM invitations WHERE code = $1",
+      [req.params.code]
+    );
+    if (!rows.length) return res.status(404).json({ valid: false, reason: "not_found" });
+    if (rows[0].used_by) return res.status(400).json({ valid: false, reason: "already_used" });
+    if (new Date(rows[0].expires_at) < new Date()) return res.status(400).json({ valid: false, reason: "expired" });
+
+    res.status(200).json({ valid: true });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /auth/register - register with invitation code (public)
+server.post("/auth/register", async (req, res) => {
+  try {
+    const { code, email, password, display_name } = req.body;
+
+    if (!code || !email || !password) {
+      return res.status(400).send("Código, email y contraseña son requeridos");
+    }
+
+    // Validate invitation
+    const { rows: inv } = await pool.query(
+      "SELECT * FROM invitations WHERE code = $1",
+      [code]
+    );
+    if (!inv.length) return res.status(404).send("Invitación no encontrada");
+    if (inv[0].used_by) return res.status(400).send("Esta invitación ya fue utilizada");
+    if (new Date(inv[0].expires_at) < new Date()) return res.status(400).send("Esta invitación ha expirado");
+
+    // Check if email already exists
+    const { rows: existing } = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    if (existing.length) return res.status(400).send("Este email ya está registrado");
+
+    // Create user
+    const uid = `local_${crypto.randomBytes(16).toString("hex")}`;
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await pool.query(
+      "INSERT INTO users (uid, email, password_hash, display_name, auth_type, is_approved) VALUES ($1, $2, $3, $4, 'local', true)",
+      [uid, email, passwordHash, display_name || email.split("@")[0]]
+    );
+
+    // Mark invitation as used
+    await pool.query(
+      "UPDATE invitations SET used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2",
+      [uid, inv[0].id]
+    );
+
+    // Generate JWT
+    const token = jwt.sign({ uid, email }, JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(201).json({ token, uid, email, display_name: display_name || email.split("@")[0] });
+  } catch (error) {
+    console.error("Error registering user:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /auth/login - login with email/password (public)
+server.post("/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).send("Email y contraseña son requeridos");
+
+    const { rows } = await pool.query(
+      "SELECT uid, email, password_hash, display_name, is_approved, is_admin FROM users WHERE email = $1 AND auth_type = 'local'",
+      [email]
+    );
+    if (!rows.length) return res.status(401).send("Credenciales incorrectas");
+
+    const user = rows[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).send("Credenciales incorrectas");
+
+    const token = jwt.sign({ uid: user.uid, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(200).json({
+      token,
+      uid: user.uid,
+      email: user.email,
+      display_name: user.display_name,
+      is_approved: user.is_approved,
+      is_admin: user.is_admin,
+    });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).send(error.message);
+  }
+});
 
 // GET /me - verifica si el usuario autenticado está aprobado
 server.get("/me", authenticate, async (req, res) => {

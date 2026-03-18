@@ -40,10 +40,11 @@ const TAB_DISPLAY_NAMES = {
   "Users": "Usuarios",
   "Prices": "Productos",
   "Categories": "Categorías",
-  "Requests": "Solicitudes"
+  "Requests": "Solicitudes",
+  "Invitations": "Invitaciones"
 };
 
-const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories", "Requests"];
+const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories", "Requests", "Invitations"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
   const [search, setSearch] = useState("");
@@ -643,6 +644,7 @@ const Admin = () => {
   const [categories, setCategories] = useState([]);
   const [editingPrices, setEditingPrices] = useState({});
   const [requests, setRequests] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
@@ -679,10 +681,27 @@ const Admin = () => {
     try {
       const res = await apiFetch(`${API_BASE_URL}/admin/requests`);
       const data = await res.json();
-      // Only show pending requests
       setRequests(data.filter(req => req.status === 'pending'));
     } catch (error) {
       console.error("Error fetching requests:", error);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/admin/invitations`);
+      setInvitations(await res.json());
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+    }
+  };
+
+  const handleCreateInvitation = async () => {
+    try {
+      await apiFetch(`${API_BASE_URL}/admin/invitations`, { method: "POST" });
+      await fetchInvitations();
+    } catch (error) {
+      console.error("Error creating invitation:", error);
     }
   };
 
@@ -691,6 +710,7 @@ const Admin = () => {
     fetchUsers();
     fetchCategories();
     fetchRequests();
+    fetchInvitations();
     fetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => {
@@ -1215,6 +1235,88 @@ const Admin = () => {
           requests={requests}
           onRequestResponse={handleRequestResponse}
         />
+      )}
+
+      {/* INVITATIONS TAB */}
+      {tab === "Invitations" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "18px", color: "#374151", margin: 0 }}>Links de Invitación</h3>
+            <button onClick={handleCreateInvitation} style={{
+              padding: "8px 20px", background: "#8b5cf6", color: "#fff",
+              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+            }}>
+              Generar Invitación
+            </button>
+          </div>
+
+          <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
+            Comparte estos links para que nuevos usuarios se registren sin necesidad de cuenta de Google. Cada link es de un solo uso y expira en 7 días.
+          </p>
+
+          {invitations.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "48px", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+              <p style={{ fontSize: "16px", color: "#6b7280" }}>No hay invitaciones creadas</p>
+            </div>
+          ) : (
+            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+                <thead>
+                  <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                    <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Link</th>
+                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Estado</th>
+                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Creado</th>
+                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Usado por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invitations.map((inv, i) => {
+                    const isUsed = !!inv.used_by;
+                    const isExpired = !isUsed && new Date(inv.expires_at) < new Date();
+                    const link = `${window.location.origin}/register/${inv.code}`;
+                    return (
+                      <tr key={inv.id} style={{ borderBottom: i < invitations.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                        <td style={{ padding: "12px 16px" }}>
+                          {!isUsed && !isExpired ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <input readOnly value={link} style={{
+                                flex: 1, padding: "6px 10px", borderRadius: "6px", border: "1px solid #d1d5db",
+                                fontSize: "12px", color: "#374151", background: "#f9fafb"
+                              }} />
+                              <button onClick={() => { navigator.clipboard.writeText(link); }} style={{
+                                padding: "6px 12px", background: "#3b82f6", color: "#fff",
+                                border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap"
+                              }}>
+                                Copiar
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: "12px", color: "#9ca3af" }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                          {isUsed ? (
+                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dcfce7", color: "#166534" }}>Usado</span>
+                          ) : isExpired ? (
+                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#fef2f2", color: "#dc2626" }}>Expirado</span>
+                          ) : (
+                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dbeafe", color: "#1d4ed8" }}>Disponible</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280", fontSize: "13px" }}>
+                          {new Date(inv.created_at).toLocaleDateString()}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center", color: "#374151", fontSize: "13px" }}>
+                          {inv.used_by_email || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
