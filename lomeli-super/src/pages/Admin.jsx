@@ -719,6 +719,20 @@ const Admin = () => {
     await fetchUsers();
   };
 
+  const handleDeliverOrder = async (orderId) => {
+    if (confirm("¿Estás seguro de que quieres marcar este pedido como entregado? Esta acción no se puede deshacer.")) {
+      try {
+        await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
+          method: "PUT",
+          body: JSON.stringify({ status: 'delivered' }),
+        });
+        await fetchOrders();
+      } catch (error) {
+        console.error("Error delivering order:", error);
+      }
+    }
+  };
+
   const handleStatusChange = async (orderId, status) => {
     try {
       await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
@@ -1073,13 +1087,59 @@ const Admin = () => {
                             {order.status === 'delivered' ? 'Entregada' : 
                              order.status === 'in_progress' ? 'En Progreso' : 'Pendiente'}
                           </span>
-                          <select value={order.status || "pending"}
-                            onChange={e => handleStatusChange(order.id, e.target.value)}
-                            style={{ padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "13px" }}>
-                            <option value="pending">Pendiente</option>
-                            <option value="in_progress">En Progreso</option>
-                            <option value="delivered">Entregada</option>
-                          </select>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            {order.status === 'delivered' ? (
+                              <button 
+                                onClick={() => handleStatusChange(order.id, 'pending')}
+                                style={{
+                                  padding: "4px 8px", 
+                                  background: "#6b7280", 
+                                  color: "#fff",
+                                  border: "none", 
+                                  borderRadius: "6px", 
+                                  fontSize: "12px",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                Reiniciar
+                              </button>
+                            ) : (
+                              <>
+                                {order.status === 'pending' && (
+                                  <button 
+                                    onClick={() => handleStatusChange(order.id, 'in_progress')}
+                                    style={{
+                                      padding: "4px 8px", 
+                                      background: "#3b82f6", 
+                                      color: "#fff",
+                                      border: "none", 
+                                      borderRadius: "6px", 
+                                      fontSize: "12px",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    Iniciar Progreso
+                                  </button>
+                                )}
+                                {(order.status === 'pending' || order.status === 'in_progress') && (
+                                  <button 
+                                    onClick={() => handleDeliverOrder(order.id)}
+                                    style={{
+                                      padding: "4px 8px", 
+                                      background: "#22c55e", 
+                                      color: "#fff",
+                                      border: "none", 
+                                      borderRadius: "6px", 
+                                      fontSize: "12px",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    Entregar
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
