@@ -175,6 +175,67 @@ server.post("/admin/products/csv", authenticate, upload.single("file"), async (r
   }
 });
 
+// POST /admin/products - create new product
+server.post("/admin/products", authenticate, upload.single("image"), async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { name, price_piece, price_kg, category } = req.body;
+    const imagePath = req.file ? `/assets/${req.file.originalname.replace(/\.[^/.]+$/, ".webp")}` : null;
+    
+    const { rows } = await pool.query(
+      "INSERT INTO products (name, price_piece, price_kg, image, category) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [name, parseFloat(price_piece) || 0, parseFloat(price_kg) || 0, imagePath, category || 'general']
+    );
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// DELETE /admin/products/:id - delete product
+server.delete("/admin/products/:id", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { rows } = await pool.query("DELETE FROM products WHERE id = $1 RETURNING *", [req.params.id]);
+    
+    if (!rows.length) return res.status(404).send("Product not found");
+    
+    res.status(200).json({ message: "Product deleted successfully", product: rows[0] });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /categories - fetch all categories
+server.get("/categories", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM categories ORDER BY name");
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /admin/categories - create new category
+server.post("/admin/categories", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { name } = req.body;
+    const { rows } = await pool.query("INSERT INTO categories (name) VALUES ($1) RETURNING *", [name]);
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 
 server.get("/admin/orders", authenticate, async (req, res) => {
   try {
