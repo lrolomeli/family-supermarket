@@ -577,6 +577,117 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
   }
 });
 
+// ORDER REQUESTS API - User-Admin Communication
+
+// POST /orders/:id/requests - create order request (user only)
+server.post("/orders/:id/requests", authenticate, async (req, res) => {
+  try {
+    const { request_type, message } = req.body;
+    const orderId = req.params.id;
+    
+    // Verify order belongs to user
+    const { rows: order } = await pool.query(
+      "SELECT uid, status FROM orders WHERE id = $1",
+      [orderId]
+    );
+    if (!order.length) return res.status(404).send("Order not found");
+    if (order[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
+    
+    // Only allow requests for in_progress orders (pending orders can be edited directly)
+    if (order[0].status !== 'in_progress') {
+      return res.status(400).send("Requests only allowed for orders in progress");
+    }
+    
+    const { rows } = await pool.query(
+      "INSERT INTO order_requests (order_id, uid, request_type, message) VALUES ($1, $2, $3, $4) RETURNING *",
+      [orderId, req.user.uid, request_type, message]
+    );
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("Error creating order request:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /admin/requests - get all pending requests (admin only)
+server.get("/admin/requests", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { rows } = await pool.query(`
+      SELECT r.*, o.id as order_id, u.email as user_email, o.products
+      FROM order_requests r
+      JOIN orders o ON r.order_id = o.id
+      JOIN users u ON r.uid = u.uid
+      WHERE r.status = 'pending'
+      ORDER BY r.created_at ASC
+    `);
+    
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching requests:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// PUT /admin/requests/:id/respond - respond to order request (admin only)
+server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { status, admin_response } = req.body;
+    const validStatuses = ['approved', 'rejected', 'completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).send("Invalid status");
+    }
+
+    const { rows } = await pool.query(
+      "UPDATE order_requests SET status = $1, admin_response = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *",
+      [status, admin_response, req.params.id]
+    );
+    
+    if (!rows.length) return res.status(404).send("Request not found");
+    
+    // If approved, temporarily allow user to modify the order
+    if (status === 'approved') {
+      await pool.query(
+        "UPDATE orders SET status = 'pending' WHERE id = (SELECT order_id FROM order_requests WHERE id = $1)",
+        [req.params.id]
+      );
+    }
+    
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error responding to request:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /orders/:id/requests - get user's requests for specific order
+server.get("/orders/:id/requests", authenticate, async (req, res) => {
+  try {
+    const { rows: order } = await pool.query(
+      "SELECT uid FROM orders WHERE id = $1",
+      [req.params.id]
+    );
+    if (!order.length) return res.status(404).send("Order not found");
+    if (order[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
+
+    const { rows } = await pool.query(
+      "SELECT * FROM order_requests WHERE order_id = $1 AND uid = $2 ORDER BY created_at DESC",
+      [req.params.id, req.user.uid]
+    );
+    
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching order requests:", error);
+    res.status(500).send(error.message);
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, async () => {
   await runSetup(pool);
