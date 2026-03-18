@@ -79,19 +79,36 @@ const FavoritesAndHistory = () => {
   };
 
   const handleSaveAsFavorite = async (order, isHistory = false) => {
+    console.log('=== SAVE FAVORITE DEBUG ===');
+    console.log('isHistory:', isHistory);
+    console.log('order:', order);
+    console.log('order.products:', order.products);
+    
     const name = prompt("¿Cómo quieres llamar a este pedido favorito?");
     if (!name || !name.trim()) return;
     
+    console.log('Favorite name:', name.trim());
+    
     try {
+      const requestBody = {
+        name: name.trim(),
+        products: order.products
+      };
+      
+      console.log('Request body being sent:', requestBody);
+      
       const response = await apiFetch(`${API_BASE_URL}/favorites`, {
         method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          products: order.products
-        }),
+        body: JSON.stringify(requestBody),
       });
       
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       if (response.ok) {
+        const newFavorite = await response.json();
+        console.log('Favorite created:', newFavorite);
+        
         showNotification(
           "Favorito Guardado",
           `Este pedido ha sido guardado como "${name.trim()}" en tus favoritos.`,
@@ -100,6 +117,7 @@ const FavoritesAndHistory = () => {
         
         // Refresh favorites if we're on the favorites tab
         if (activeTab === 'favorites') {
+          console.log('Refreshing favorites data...');
           loadData();
         }
       } else {

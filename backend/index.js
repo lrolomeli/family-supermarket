@@ -930,9 +930,18 @@ server.delete("/admin/requests/cleanup", authenticate, async (req, res) => {
 // POST /favorites - create new favorite order
 server.post("/favorites", authenticate, async (req, res) => {
   try {
+    console.log('=== POST /favorites DEBUG ===');
+    console.log('User UID:', req.user.uid);
+    console.log('Request body:', req.body);
+    
     const { name, products } = req.body;
     
+    console.log('Name:', name);
+    console.log('Products type:', typeof products);
+    console.log('Products value:', products);
+    
     if (!name || !products) {
+      console.log('❌ Missing required fields');
       return res.status(400).send("Name and products are required");
     }
     
@@ -940,6 +949,9 @@ server.post("/favorites", authenticate, async (req, res) => {
       "INSERT INTO order_favorites (uid, name, products) VALUES ($1, $2, $3) RETURNING *",
       [req.user.uid, name, JSON.stringify(products)]
     );
+    
+    console.log('✅ Favorite created successfully:', rows[0]);
+    console.log('Favorite ID:', rows[0].id);
     
     res.status(201).json(rows[0]);
   } catch (error) {
