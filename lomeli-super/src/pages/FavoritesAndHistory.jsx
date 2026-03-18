@@ -50,15 +50,66 @@ const FavoritesAndHistory = () => {
     }
   };
 
-  const handleReorder = async (favoriteId) => {
+  const handleSaveAsFavorite = async (order, isHistory = false) => {
+    const name = prompt("¿Cómo quieres llamar a este pedido favorito?");
+    if (!name || !name.trim()) return;
+    
     try {
-      const response = await apiFetch(`${API_BASE_URL}/favorites/${favoriteId}/reorder`, {
-        method: "POST"
+      const response = await apiFetch(`${API_BASE_URL}/favorites`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          products: order.products
+        }),
       });
       
       if (response.ok) {
-        setSuccess("✅ Pedido creado exitosamente desde favoritos!");
-        setTimeout(() => setSuccess(""), 3000);
+        showNotification(
+          "Favorito Guardado",
+          `Este pedido ha sido guardado como "${name.trim()}" en tus favoritos.`,
+          'success'
+        );
+        
+        // Refresh favorites if we're on the favorites tab
+        if (activeTab === 'favorites') {
+          loadData();
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "No se pudo guardar el favorito");
+      }
+    } catch (error) {
+      setError("Error de conexión. Intenta nuevamente.");
+      console.error("Error saving favorite:", error);
+    }
+  };
+
+  const handleReorder = async (order, isHistory = false) => {
+    try {
+      let response;
+      
+      if (isHistory) {
+        // Create new order from history
+        response = await apiFetch(`${API_BASE_URL}/orders`, {
+          method: "POST",
+          body: JSON.stringify({
+            products: order.products
+          }),
+        });
+      } else {
+        // Create new order from favorite
+        response = await apiFetch(`${API_BASE_URL}/favorites/${order.id}/reorder`, {
+          method: "POST"
+        });
+      }
+      
+      if (response.ok) {
+        const newOrder = await response.json();
+        showNotification(
+          "Pedido Creado",
+          `Nuevo pedido #${newOrder.id} creado exitosamente!`,
+          'success'
+        );
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo crear el pedido");
@@ -212,13 +263,13 @@ const FavoritesAndHistory = () => {
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
-                        onClick={() => handleReorder(favorite.id)}
+                        onClick={() => handleReorder(favorite, false)}
                         style={{
                           padding: "6px 12px", background: "#22c55e", color: "#fff",
                           border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px"
                         }}
                       >
-                        Pedir de nuevo
+                        🛒 Pedir de nuevo
                       </button>
                       <button
                         onClick={() => handleDeleteFavorite(favorite.id)}
@@ -279,9 +330,32 @@ const FavoritesAndHistory = () => {
                       </h3>
                       <p style={{ margin: "0", fontSize: "12px", color: "#9ca3af" }}>
                         {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}
+                        {order.delivered_at && ` • Entregado el ${new Date(order.delivered_at).toLocaleDateString()}`}
                       </p>
                     </div>
-                    {getStatusBadge(order.status)}
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      {getStatusBadge(order.status)}
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <button
+                          onClick={() => handleSaveAsFavorite(order, true)}
+                          style={{
+                            padding: "4px 8px", background: "#f59e0b", color: "#fff",
+                            border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px"
+                          }}
+                        >
+                          ⭐ Favorito
+                        </button>
+                        <button
+                          onClick={() => handleReorder(order, true)}
+                          style={{
+                            padding: "4px 8px", background: "#22c55e", color: "#fff",
+                            border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px"
+                          }}
+                        >
+                          🛒 Pedir de nuevo
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
