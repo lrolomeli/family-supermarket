@@ -532,11 +532,15 @@ const Admin = () => {
   };
 
   const handleStatusChange = async (orderId, status) => {
-    await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
-    });
-    await fetchOrders();
+    try {
+      await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      });
+      await fetchOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+    }
   };
 
   const handlePriceChange = (id, field, value) => {
@@ -659,15 +663,15 @@ const Admin = () => {
   const stats = useMemo(() => {
     const total = orders.length;
     const pending = orders.filter(o => o.status === "pending" || !o.status).length;
-    const completed = orders.filter(o => o.status === "completed").length;
-    const cancelled = orders.filter(o => o.status === "cancelled").length;
+    const inProgress = orders.filter(o => o.status === "in_progress").length;
+    const delivered = orders.filter(o => o.status === "delivered").length;
     const uniqueUsers = new Set(orders.map(o => o.user_email)).size;
     const totalItems = orders.reduce((acc, o) => acc + (o.products?.length || 0), 0);
     const revenue = catalog.length
       ? orders.filter(o => o.status !== "cancelled")
           .reduce((acc, o) => acc + calcOrderTotal(o.products, catalog), 0)
       : null;
-    return { total, pending, completed, cancelled, uniqueUsers, totalItems, revenue };
+    return { total, pending, inProgress, delivered, uniqueUsers, totalItems, revenue };
   }, [orders, catalog]);
 
   // Top products chart data
@@ -737,9 +741,9 @@ const Admin = () => {
           {/* Stat cards */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
             <StatCard label="Total Orders" value={stats.total} color="#3b82f6" />
-            <StatCard label="Pending" value={stats.pending} color="#f59e0b" />
-            <StatCard label="Completed" value={stats.completed} color="#22c55e" />
-            <StatCard label="Cancelled" value={stats.cancelled} color="#ef4444" />
+            <StatCard label="Pendientes" value={stats.pending} color="#f59e0b" />
+            <StatCard label="En Progreso" value={stats.inProgress} color="#3b82f6" />
+            <StatCard label="Entregadas" value={stats.delivered} color="#22c55e" />
             <StatCard label="Customers" value={stats.uniqueUsers} color="#8b5cf6" />
             <StatCard label="Total Items" value={stats.totalItems} color="#06b6d4" />
             {stats.revenue !== null && (
@@ -797,10 +801,10 @@ const Admin = () => {
           <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
               style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
-              <option value="all">All statuses</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="in_progress">En Progreso</option>
+              <option value="delivered">Entregadas</option>
             </select>
             <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
               style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
@@ -832,13 +836,22 @@ const Admin = () => {
                               {formatMXN(calcOrderTotal(order.products, catalog))}
                             </span>
                           )}
-                          <Badge status={order.status} />
+                          <span style={{
+                            padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 600,
+                            backgroundColor: order.status === 'delivered' ? '#dcfce7' : 
+                                           order.status === 'in_progress' ? '#dbeafe' : '#fef3c7',
+                            color: order.status === 'delivered' ? '#166534' : 
+                                  order.status === 'in_progress' ? '#1d4ed8' : '#92400e'
+                          }}>
+                            {order.status === 'delivered' ? 'Entregada' : 
+                             order.status === 'in_progress' ? 'En Progreso' : 'Pendiente'}
+                          </span>
                           <select value={order.status || "pending"}
                             onChange={e => handleStatusChange(order.id, e.target.value)}
                             style={{ padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "13px" }}>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
+                            <option value="pending">Pendiente</option>
+                            <option value="in_progress">En Progreso</option>
+                            <option value="delivered">Entregada</option>
                           </select>
                         </div>
                       </div>
