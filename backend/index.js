@@ -888,16 +888,39 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
     // Prepare products for database
     let productsJson;
     if (typeof favorite[0].products === 'string') {
-      productsJson = favorite[0].products;
-      console.log('Products already string, using as-is');
+      console.log('Products already string, checking validity...');
+      
+      // Try to parse and re-stringify to ensure clean JSON
+      try {
+        const parsed = JSON.parse(favorite[0].products);
+        productsJson = JSON.stringify(parsed);
+        console.log('Products JSON cleaned and validated');
+      } catch (parseError) {
+        console.log('❌ Products JSON is corrupted, cannot fix:', parseError.message);
+        throw new Error('Products data is corrupted and cannot be processed');
+      }
     } else {
       productsJson = JSON.stringify(favorite[0].products);
       console.log('Products converted to JSON string');
     }
     
+    // Additional validation
+    if (!productsJson || productsJson.trim() === '') {
+      throw new Error('Products data is empty');
+    }
+    
     console.log('Final products JSON type:', typeof productsJson);
     console.log('Final products JSON length:', productsJson.length);
     console.log('Final products JSON preview:', productsJson.substring(0, 100) + '...');
+    
+    // Validate JSON one more time before database
+    try {
+      JSON.parse(productsJson);
+      console.log('✅ Final JSON validation passed');
+    } catch (e) {
+      console.log('❌ Final JSON validation failed:', e.message);
+      throw new Error('Invalid JSON format: ' + e.message);
+    }
     
     // Create new order from favorite
     const { rows } = await pool.query(
