@@ -716,10 +716,23 @@ const Admin = () => {
 
   const handleRequestResponse = async (requestId, status, adminResponse) => {
     try {
-      await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
+      console.log('Sending admin response:', { requestId, status, adminResponse });
+      
+      const response = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
         method: "PUT",
         body: JSON.stringify({ status, admin_response }),
       });
+      
+      console.log('Admin response API status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Admin response error:', errorText);
+        throw new Error(`Failed to respond to request: ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Admin response success:', responseData);
       
       // Remove the request from the list since it's no longer pending
       setRequests(prev => prev.filter(req => req.id !== requestId));

@@ -653,14 +653,26 @@ server.get("/admin/requests", authenticate, async (req, res) => {
 // PUT /admin/requests/:id/respond - respond to order request (admin only)
 server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
   try {
+    console.log('Admin response request received:', {
+      requestId: req.params.id,
+      body: req.body,
+      user: req.user.uid
+    });
+
     const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
-    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+    if (!user.length || !user[0].is_admin) {
+      console.log('Admin authorization failed for user:', req.user.uid);
+      return res.status(403).send("Unauthorized");
+    }
 
     const { status, admin_response } = req.body;
     const validStatuses = ['approved', 'rejected', 'completed'];
     if (!validStatuses.includes(status)) {
+      console.log('Invalid status:', status);
       return res.status(400).send("Invalid status");
     }
+
+    console.log('Admin response validated:', { status, admin_response });
 
     // Get the request details to check for proposed changes
     const { rows: request } = await pool.query(
@@ -713,6 +725,7 @@ server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
       console.log('Updated order status to pending');
     }
     
+    console.log('Admin response completed successfully');
     res.status(200).json(rows[0]);
   } catch (error) {
     console.error("Error responding to request:", error);
