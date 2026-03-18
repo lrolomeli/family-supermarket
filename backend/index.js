@@ -387,9 +387,51 @@ server.post("/orders", authenticate, async (req, res) => {
     await syncUser(req.user.uid, req.user.email);
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { products } = req.body;
+    
+    console.log('=== POST /orders DEBUG ===');
+    console.log('Products type:', typeof products);
+    console.log('Products value:', products);
+    
+    // Prepare products for database
+    let productsJson;
+    if (typeof products === 'string') {
+      console.log('Products already string, checking validity...');
+      
+      // Try to parse and re-stringify to ensure clean JSON
+      try {
+        const parsed = JSON.parse(products);
+        productsJson = JSON.stringify(parsed);
+        console.log('Products JSON cleaned and validated');
+      } catch (parseError) {
+        console.log('❌ Products JSON is corrupted, cannot fix:', parseError.message);
+        throw new Error('Products data is corrupted and cannot be processed');
+      }
+    } else {
+      productsJson = JSON.stringify(products);
+      console.log('Products converted to JSON string');
+    }
+    
+    // Additional validation
+    if (!productsJson || productsJson.trim() === '') {
+      throw new Error('Products data is empty');
+    }
+    
+    console.log('Final products JSON type:', typeof productsJson);
+    console.log('Final products JSON length:', productsJson.length);
+    console.log('Final products JSON preview:', productsJson.substring(0, 100) + '...');
+    
+    // Validate JSON one more time before database
+    try {
+      JSON.parse(productsJson);
+      console.log('✅ Final JSON validation passed');
+    } catch (e) {
+      console.log('❌ Final JSON validation failed:', e.message);
+      throw new Error('Invalid JSON format: ' + e.message);
+    }
+    
     const { rows } = await pool.query(
       "INSERT INTO orders (uid, products, status) VALUES ($1, $2, 'pending') RETURNING id",
-      [req.user.uid, JSON.stringify(products)]
+      [req.user.uid, productsJson]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (error) {
