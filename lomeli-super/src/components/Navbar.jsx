@@ -13,8 +13,8 @@ const Navbar = ({ user, isAdmin }) => {
 
   return (
     <nav style={{ display: "flex", gap: "16px", padding: "10px 20px", borderBottom: "1px solid #ccc" }}>
-      <Link to="/order">New Order</Link>
-      <Link to="/my-orders">My Orders</Link>
+      <Link to="/order">Orden Nueva</Link>
+      <Link to="/my-orders">Mis Ordenes</Link>
       {isAdmin && <Link to="/admin">Admin</Link>}
       <span style={{ marginLeft: "auto" }}>{user?.email}</span>
       <button onClick={handleLogout}>Logout</button>
