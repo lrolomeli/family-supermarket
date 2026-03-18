@@ -31,6 +31,7 @@ services:
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      ADMIN_EMAIL: ${VITE_ADMIN_EMAIL}
       ASSETS_DIR: /app/public
     volumes:
       - ./lomeli-super/public:/app/public
