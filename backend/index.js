@@ -716,13 +716,10 @@ server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
         }
       }
       
-      // Set order back to pending so user can edit if needed
-      await pool.query(
-        "UPDATE orders SET status = 'pending' WHERE id = $1",
-        [requestData.order_id]
-      );
+      // Keep order in in_progress status - user can continue working on it
+      console.log('Keeping order in in_progress status after approval');
       
-      console.log('Updated order status to pending');
+      console.log('Updated order status to in_progress');
     }
     
     console.log('Admin response completed successfully');
