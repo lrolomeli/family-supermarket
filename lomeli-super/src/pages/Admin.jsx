@@ -34,7 +34,7 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
   </div>
 );
 
-const TABS = ["Dashboard", "Orders", "Users", "Prices"];
+const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories }) => {
   const [search, setSearch] = useState("");
@@ -253,6 +253,92 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
   );
 };
 
+const CategoriesTab = ({ categories, onAddCategory }) => {
+  const [newCategory, setNewCategory] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    
+    try {
+      await onAddCategory(newCategory);
+      setNewCategory("");
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Error adding category:", error);
+    }
+  };
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
+        <button onClick={() => setShowAddForm(!showAddForm)} style={{
+          padding: "7px 18px", background: "#8b5cf6", color: "#fff",
+          border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+        }}>
+          {showAddForm ? "Cancel" : "Add Category"}
+        </button>
+      </div>
+
+      {/* Add Category Form */}
+      {showAddForm && (
+        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Add New Category</h3>
+          <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
+            <input
+              placeholder="Category name"
+              value={newCategory}
+              onChange={e => setNewCategory(e.target.value)}
+              style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button onClick={handleAddCategory} style={{
+              padding: "8px 20px", background: "#8b5cf6", color: "#fff",
+              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+            }}>
+              Add Category
+            </button>
+            <button onClick={() => {
+              setShowAddForm(false);
+              setNewCategory("");
+            }} style={{
+              padding: "8px 20px", background: "#f3f4f6", color: "#374151",
+              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+            }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Categories List */}
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+          <thead>
+            <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+              <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Category Name</th>
+              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Product Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((category, i) => (
+              <tr key={category.id} style={{ borderBottom: i < categories.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                <td style={{ padding: "12px 16px", fontWeight: 500, color: "#374151" }}>{category.name}</td>
+                <td style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>
+                  {/* Product count would need to be calculated */}
+                  -
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
@@ -402,6 +488,14 @@ const Admin = () => {
     const initial = {};
     updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
     setEditingPrices(initial);
+  };
+
+  const handleAddCategory = async (categoryName) => {
+    await apiFetch(`${API_BASE_URL}/admin/categories`, {
+      method: "POST",
+      body: JSON.stringify({ name: categoryName }),
+    });
+    await fetchCategories();
   };
 
   // --- Stats ---
@@ -670,6 +764,14 @@ const Admin = () => {
           onAddProduct={handleAddProduct}
           onDeleteProduct={handleDeleteProduct}
           categories={categories}
+        />
+      )}
+
+      {/* CATEGORIES TAB */}
+      {tab === "Categories" && (
+        <CategoriesTab
+          categories={categories}
+          onAddCategory={handleAddCategory}
         />
       )}
     </div>
