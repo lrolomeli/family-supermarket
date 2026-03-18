@@ -90,13 +90,22 @@ const FavoritesAndHistory = () => {
         }
       } else {
         let errorMessage = "No se pudo guardar el favorito";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (jsonError) {
-          // If response is not JSON, get it as text
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (jsonError) {
+            console.log('Failed to parse JSON error response');
+          }
+        } else {
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            console.log('Failed to read text error response');
+          }
         }
         setError(errorMessage);
       }
@@ -111,6 +120,18 @@ const FavoritesAndHistory = () => {
       console.log('=== FRONTEND REORDER DEBUG ===');
       console.log('isHistory:', isHistory);
       console.log('order:', order);
+      console.log('order.products:', order.products);
+      console.log('order.products length:', order.products?.length || 'undefined');
+      
+      // Log each product in detail
+      if (order.products && Array.isArray(order.products)) {
+        console.log('Products in order:');
+        order.products.forEach((product, index) => {
+          console.log(`  ${index + 1}. ${product.name} - ${product.quantity} ${product.unit}`);
+        });
+      } else {
+        console.log('❌ order.products is not an array or is undefined');
+      }
       
       let response;
       
@@ -146,14 +167,24 @@ const FavoritesAndHistory = () => {
         );
       } else {
         let errorMessage = "No se pudo crear el pedido";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (jsonError) {
-          // If response is not JSON, get it as text
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (jsonError) {
+            console.log('Failed to parse JSON error response');
+          }
+        } else {
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            console.log('Failed to read text error response');
+          }
         }
+        
         console.log('Error response:', errorMessage);
         setError(errorMessage);
       }
@@ -181,14 +212,24 @@ const FavoritesAndHistory = () => {
         setTimeout(() => setSuccess(""), 3000);
       } else {
         let errorMessage = "No se pudo eliminar el favorito";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (jsonError) {
-          // If response is not JSON, get it as text
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (jsonError) {
+            console.log('Failed to parse JSON error response');
+          }
+        } else {
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            console.log('Failed to read text error response');
+          }
         }
+        
         setError(errorMessage);
       }
     } catch (error) {
