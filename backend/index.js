@@ -265,6 +265,15 @@ server.post("/auth/login", async (req, res) => {
 server.get("/me", authenticate, async (req, res) => {
   try {
     await syncUser(req.user.uid, req.user.email);
+    
+    // Ensure admin email is always approved and admin
+    if (ADMIN_EMAIL && req.user.email && req.user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      await pool.query(
+        "UPDATE users SET is_admin = true, is_approved = true WHERE uid = $1",
+        [req.user.uid]
+      );
+    }
+    
     const { rows } = await pool.query(
       "SELECT is_approved, is_admin FROM users WHERE uid = $1",
       [req.user.uid]
