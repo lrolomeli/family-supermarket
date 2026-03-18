@@ -1,12 +1,11 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Install vips for sharp (prebuilt binary support)
+# Install vips for sharp runtime
 RUN apk add --no-cache vips-dev
 
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --ignore-scripts && \
-    npm rebuild sharp
+COPY package.json ./
+RUN npm install --omit=dev
 
 COPY . .
 
