@@ -527,6 +527,20 @@ server.put("/admin/orders/:id/status", authenticate, async (req, res) => {
   }
 });
 
+// GET /orders/history - get user's order history (all orders)
+server.get("/orders/history", authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE uid = $1 ORDER BY created_at DESC",
+      [req.user.uid]
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching order history:", error);
+    res.status(500).send(error.message);
+  }
+});
+
 // GET /orders/:id - get specific order with status check
 server.get("/orders/:id", authenticate, async (req, res) => {
   try {
@@ -872,20 +886,6 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error("Error creating order from favorite:", error);
-    res.status(500).send(error.message);
-  }
-});
-
-// GET /orders/history - get user's order history (all orders)
-server.get("/orders/history", authenticate, async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM orders WHERE uid = $1 ORDER BY created_at DESC",
-      [req.user.uid]
-    );
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error("Error fetching order history:", error);
     res.status(500).send(error.message);
   }
 });
