@@ -1,11 +1,14 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Install vips for sharp runtime
-RUN apk add --no-cache vips-dev
+# Runtime lib for sharp
+RUN apk add --no-cache vips
 
 COPY package.json ./
-RUN npm install --omit=dev
+# Install deps without running postinstall scripts
+RUN npm install --omit=dev --ignore-scripts
+# Force sharp to download the correct prebuilt binary for linux/musl
+RUN npm install --os=linux --cpu=$(node -p "process.arch") --libc=musl sharp
 
 COPY . .
 
