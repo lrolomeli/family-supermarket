@@ -4,7 +4,7 @@ import Login from "./components/Login";
 import Navbar from "./components/Navbar";
 import Pending from "./pages/Pending";
 import './App.css'
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import Order from "./pages/Order";
@@ -15,7 +15,6 @@ import API_BASE_URL from "./config";
 import apiFetch from "./api";
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-console.log("ADMIN_EMAIL:", ADMIN_EMAIL);
 
 const App = () => {
   const [user, setUser] = useState(undefined);
@@ -41,7 +40,7 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  if (user === undefined || (user && approved === undefined)) return <p>Loading...</p>;
+  if (user === undefined || (user && approved === undefined)) return <p>Cargando...</p>;
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 

@@ -388,46 +388,13 @@ server.post("/orders", authenticate, async (req, res) => {
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { products } = req.body;
     
-    console.log('=== POST /orders DEBUG ===');
-    console.log('Products type:', typeof products);
-    console.log('Products value:', products);
+    const productsJson = typeof products === 'string' ? products : JSON.stringify(products);
     
-    // Prepare products for database
-    let productsJson;
-    if (typeof products === 'string') {
-      console.log('Products already string, checking validity...');
-      
-      // Try to parse and re-stringify to ensure clean JSON
-      try {
-        const parsed = JSON.parse(products);
-        productsJson = JSON.stringify(parsed);
-        console.log('Products JSON cleaned and validated');
-      } catch (parseError) {
-        console.log('❌ Products JSON is corrupted, cannot fix:', parseError.message);
-        throw new Error('Products data is corrupted and cannot be processed');
-      }
-    } else {
-      productsJson = JSON.stringify(products);
-      console.log('Products converted to JSON string');
-    }
-    
-    // Additional validation
     if (!productsJson || productsJson.trim() === '') {
       throw new Error('Products data is empty');
     }
-    
-    console.log('Final products JSON type:', typeof productsJson);
-    console.log('Final products JSON length:', productsJson.length);
-    console.log('Final products JSON preview:', productsJson.substring(0, 100) + '...');
-    
-    // Validate JSON one more time before database
-    try {
-      JSON.parse(productsJson);
-      console.log('✅ Final JSON validation passed');
-    } catch (e) {
-      console.log('❌ Final JSON validation failed:', e.message);
-      throw new Error('Invalid JSON format: ' + e.message);
-    }
+    // Validate JSON
+    JSON.parse(productsJson);
     
     const { rows } = await pool.query(
       "INSERT INTO orders (uid, products, status) VALUES ($1, $2, 'pending') RETURNING id",
@@ -559,7 +526,6 @@ server.put("/admin/orders/:id/status", authenticate, async (req, res) => {
         "UPDATE orders SET is_delivered = true, delivered_at = CURRENT_TIMESTAMP WHERE id = $1",
         [req.params.id]
       );
-      console.log(`Order ${req.params.id} marked as delivered and moved to history`);
     }
     
     res.status(200).json(updatedOrder);
@@ -600,127 +566,16 @@ server.get("/orders/:id", authenticate, async (req, res) => {
   }
 });
 
-// POST /favorites - create favorite order
-server.post("/favorites", authenticate, async (req, res) => {
-  try {
-    const { name, products } = req.body;
-    
-    const { rows } = await pool.query(
-      "INSERT INTO favorites (uid, name, products) VALUES ($1, $2, $3) RETURNING *",
-      [req.user.uid, name, JSON.stringify(products)]
-    );
-    
-    res.status(201).json(rows[0]);
-  } catch (error) {
-    console.error("Error creating favorite:", error);
-    res.status(500).send(error.message);
-  }
-});
-
 // GET /favorites - get user's favorite orders
 server.get("/favorites", authenticate, async (req, res) => {
   try {
-    console.log('=== GET /favorites DEBUG ===');
-    console.log('User UID:', req.user.uid);
-    
     const { rows } = await pool.query(
       "SELECT * FROM order_favorites WHERE uid = $1 ORDER BY created_at DESC",
       [req.user.uid]
     );
-    
-    console.log('Favorites query result:', rows.length, 'items');
-    rows.forEach((fav, i) => {
-      console.log(`  ${i + 1}. ID: ${fav.id}, Name: ${fav.name}`);
-    });
-    
     res.status(200).json(rows);
   } catch (error) {
     console.error("Error fetching favorites:", error);
-    res.status(500).send(error.message);
-  }
-});
-
-// POST /favorites/:id/reorder - create order from favorite
-server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
-  try {
-    console.log('=== FAVORITES REORDER DEBUG ===');
-    console.log('Request params:', req.params);
-    console.log('Request user:', req.user.uid);
-    
-    // Get the favorite order
-    const { rows: favorite } = await pool.query(
-      "SELECT * FROM order_favorites WHERE id = $1 AND uid = $2",
-      [req.params.id, req.user.uid]
-    );
-    
-    console.log('Query result - favorite rows length:', favorite.length);
-    if (favorite.length > 0) {
-      console.log('Found favorite data:', favorite[0]);
-    }
-    
-    if (!favorite.length) {
-      console.log('❌ Favorite not found - checking if any favorites exist for this user');
-      const { rows: allUserFavorites } = await pool.query(
-        "SELECT id, name FROM order_favorites WHERE uid = $1",
-        [req.user.uid]
-      );
-      console.log('User favorites in database:', allUserFavorites);
-      return res.status(404).send("Favorite not found");
-    }
-    
-    console.log('Found favorite:', favorite[0].id);
-    console.log('Products type:', typeof favorite[0].products);
-    console.log('Products value:', favorite[0].products);
-    
-    // Prepare products for database
-    let productsJson;
-    if (typeof favorite[0].products === 'string') {
-      console.log('Products already string, checking validity...');
-      
-      // Try to parse and re-stringify to ensure clean JSON
-      try {
-        const parsed = JSON.parse(favorite[0].products);
-        productsJson = JSON.stringify(parsed);
-        console.log('Products JSON cleaned and validated');
-      } catch (parseError) {
-        console.log('❌ Products JSON is corrupted, cannot fix:', parseError.message);
-        throw new Error('Products data is corrupted and cannot be processed');
-      }
-    } else {
-      productsJson = JSON.stringify(favorite[0].products);
-      console.log('Products converted to JSON string');
-    }
-    
-    // Additional validation
-    if (!productsJson || productsJson.trim() === '') {
-      throw new Error('Products data is empty');
-    }
-    
-    console.log('Final products JSON type:', typeof productsJson);
-    console.log('Final products JSON length:', productsJson.length);
-    console.log('Final products JSON preview:', productsJson.substring(0, 100) + '...');
-    
-    // Validate JSON one more time before database
-    try {
-      JSON.parse(productsJson);
-      console.log('✅ Final JSON validation passed');
-    } catch (e) {
-      console.log('❌ Final JSON validation failed:', e.message);
-      throw new Error('Invalid JSON format: ' + e.message);
-    }
-    
-    // Create new order from favorite
-    const { rows } = await pool.query(
-      "INSERT INTO orders (uid, products, status, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *",
-      [req.user.uid, productsJson, 'pending']
-    );
-    
-    console.log('✅ Order created successfully:', rows[0].id);
-    res.status(201).json(rows[0]);
-  } catch (error) {
-    console.error("Error creating order from favorite:", error);
-    console.error("Error details:", error.message);
-    console.error("Error code:", error.code);
     res.status(500).send(error.message);
   }
 });
@@ -806,33 +661,17 @@ server.get("/admin/requests", authenticate, async (req, res) => {
 // PUT /admin/requests/:id/respond - respond to order request (admin only)
 server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
   try {
-    console.log('Admin response request received:', {
-      requestId: req.params.id,
-      body: req.body,
-      user: req.user.uid
-    });
-
     const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
-    if (!user.length || !user[0].is_admin) {
-      console.log('Admin authorization failed for user:', req.user.uid);
-      return res.status(403).send("Unauthorized");
-    }
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
 
     const { status, admin_response } = req.body;
     const validStatuses = ['approved', 'rejected', 'completed'];
-    if (!validStatuses.includes(status)) {
-      console.log('Invalid status:', status);
-      return res.status(400).send("Invalid status");
-    }
+    if (!validStatuses.includes(status)) return res.status(400).send("Invalid status");
 
-    console.log('Admin response validated:', { status, admin_response });
-
-    // Get the request details to check for proposed changes
     const { rows: request } = await pool.query(
       "SELECT * FROM order_requests WHERE id = $1",
       [req.params.id]
     );
-    
     if (!request.length) return res.status(404).send("Request not found");
     
     const { rows } = await pool.query(
@@ -840,42 +679,22 @@ server.put("/admin/requests/:id/respond", authenticate, async (req, res) => {
       [status, admin_response, req.params.id]
     );
     
-    // If approved, apply the proposed changes and allow user to modify
-    if (status === 'approved') {
-      const requestData = request[0];
-      
-      // If there are proposed changes, apply them to the order
-      if (requestData.proposed_changes) {
-        try {
-          let proposedChanges;
-          // Handle different formats of proposed_changes
-          if (typeof requestData.proposed_changes === 'string') {
-            proposedChanges = JSON.parse(requestData.proposed_changes);
-          } else {
-            proposedChanges = requestData.proposed_changes;
-          }
-          
-          console.log('Applying proposed changes:', proposedChanges);
-          
-          await pool.query(
-            "UPDATE orders SET products = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-            [JSON.stringify(proposedChanges), requestData.order_id]
-          );
-          
-          console.log('Successfully updated order products');
-        } catch (parseError) {
-          console.error("Error parsing proposed changes:", parseError);
-          console.error("Raw proposed_changes:", requestData.proposed_changes);
-        }
+    // If approved, apply the proposed changes
+    if (status === 'approved' && request[0].proposed_changes) {
+      try {
+        const proposedChanges = typeof request[0].proposed_changes === 'string'
+          ? JSON.parse(request[0].proposed_changes)
+          : request[0].proposed_changes;
+        
+        await pool.query(
+          "UPDATE orders SET products = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+          [JSON.stringify(proposedChanges), request[0].order_id]
+        );
+      } catch (parseError) {
+        console.error("Error parsing proposed changes:", parseError);
       }
-      
-      // Keep order in in_progress status - user can continue working on it
-      console.log('Keeping order in in_progress status after approval');
-      
-      console.log('Updated order status to in_progress');
     }
     
-    console.log('Admin response completed successfully');
     res.status(200).json(rows[0]);
   } catch (error) {
     console.error("Error responding to request:", error);
@@ -930,18 +749,9 @@ server.delete("/admin/requests/cleanup", authenticate, async (req, res) => {
 // POST /favorites - create new favorite order
 server.post("/favorites", authenticate, async (req, res) => {
   try {
-    console.log('=== POST /favorites DEBUG ===');
-    console.log('User UID:', req.user.uid);
-    console.log('Request body:', req.body);
-    
     const { name, products } = req.body;
     
-    console.log('Name:', name);
-    console.log('Products type:', typeof products);
-    console.log('Products value:', products);
-    
     if (!name || !products) {
-      console.log('❌ Missing required fields');
       return res.status(400).send("Name and products are required");
     }
     
@@ -949,9 +759,6 @@ server.post("/favorites", authenticate, async (req, res) => {
       "INSERT INTO order_favorites (uid, name, products) VALUES ($1, $2, $3) RETURNING *",
       [req.user.uid, name, JSON.stringify(products)]
     );
-    
-    console.log('✅ Favorite created successfully:', rows[0]);
-    console.log('Favorite ID:', rows[0].id);
     
     res.status(201).json(rows[0]);
   } catch (error) {
@@ -980,11 +787,6 @@ server.delete("/favorites/:id", authenticate, async (req, res) => {
 // POST /favorites/:id/reorder - create new order from favorite
 server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
   try {
-    console.log('=== FAVORITES REORDER DEBUG ===');
-    console.log('Request params:', req.params);
-    console.log('Request user:', req.user.uid);
-    
-    // Get the favorite order
     const { rows: favorite } = await pool.query(
       "SELECT * FROM order_favorites WHERE id = $1 AND uid = $2",
       [req.params.id, req.user.uid]
@@ -992,59 +794,23 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
     
     if (!favorite.length) return res.status(404).send("Favorite not found");
     
-    console.log('Found favorite:', favorite[0].id);
-    console.log('Products type:', typeof favorite[0].products);
-    console.log('Products value:', favorite[0].products);
+    const productsJson = typeof favorite[0].products === 'string'
+      ? favorite[0].products
+      : JSON.stringify(favorite[0].products);
     
-    // Prepare products for database
-    let productsJson;
-    if (typeof favorite[0].products === 'string') {
-      console.log('Products already string, checking validity...');
-      
-      // Try to parse and re-stringify to ensure clean JSON
-      try {
-        const parsed = JSON.parse(favorite[0].products);
-        productsJson = JSON.stringify(parsed);
-        console.log('Products JSON cleaned and validated');
-      } catch (parseError) {
-        console.log('❌ Products JSON is corrupted, cannot fix:', parseError.message);
-        throw new Error('Products data is corrupted and cannot be processed');
-      }
-    } else {
-      productsJson = JSON.stringify(favorite[0].products);
-      console.log('Products converted to JSON string');
-    }
-    
-    // Additional validation
     if (!productsJson || productsJson.trim() === '') {
       throw new Error('Products data is empty');
     }
+    JSON.parse(productsJson); // validate
     
-    console.log('Final products JSON type:', typeof productsJson);
-    console.log('Final products JSON length:', productsJson.length);
-    console.log('Final products JSON preview:', productsJson.substring(0, 100) + '...');
-    
-    // Validate JSON one more time before database
-    try {
-      JSON.parse(productsJson);
-      console.log('✅ Final JSON validation passed');
-    } catch (e) {
-      console.log('❌ Final JSON validation failed:', e.message);
-      throw new Error('Invalid JSON format: ' + e.message);
-    }
-    
-    // Create new order from favorite
     const { rows } = await pool.query(
-      "INSERT INTO orders (uid, products, status, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *",
-      [req.user.uid, productsJson, 'pending']
+      "INSERT INTO orders (uid, products, status, created_at) VALUES ($1, $2, 'pending', CURRENT_TIMESTAMP) RETURNING *",
+      [req.user.uid, productsJson]
     );
     
-    console.log('✅ Order created successfully:', rows[0].id);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error("Error creating order from favorite:", error);
-    console.error("Error details:", error.message);
-    console.error("Error code:", error.code);
     res.status(500).send(error.message);
   }
 });

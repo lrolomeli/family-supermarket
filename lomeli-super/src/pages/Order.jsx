@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";

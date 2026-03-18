@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
@@ -19,7 +19,7 @@ const Badge = ({ status = "pending" }) => {
     <span style={{
       background: s.bg, color: s.color, padding: "2px 10px",
       borderRadius: "999px", fontSize: "12px", fontWeight: 600, textTransform: "uppercase"
-    }}>{status}</span>
+    }}>{status === "pending" ? "Pendiente" : status === "completed" ? "Completado" : status === "cancelled" ? "Cancelado" : status}</span>
   );
 };
 
@@ -476,7 +476,6 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
   const [response, setResponse] = useState("");
 
   const handleRespond = (request) => {
-    console.log('Opening response form for request:', request.id, request);
     setRespondingTo(request.id);
     setResponse("");
   };
@@ -487,18 +486,10 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
     // Use a default response if admin didn't type anything
     const finalResponse = response.trim() || (status === 'approved' ? 'Aprobado' : 'Rechazado');
     
-    console.log('=== SUBMITTING ADMIN RESPONSE ===');
-    console.log('respondingTo:', respondingTo);
-    console.log('status:', status);
-    console.log('finalResponse:', finalResponse);
-    console.log('Current requests count:', requests.length);
-    
     try {
       await onRequestResponse(respondingTo, status, finalResponse);
-      console.log('✅ onRequestResponse completed successfully');
-      console.log('Requests after response:', requests.length);
     } catch (error) {
-      console.error('❌ Error in submitResponse:', error);
+      console.error('Error in submitResponse:', error);
     }
     
     setRespondingTo(null);
@@ -653,7 +644,7 @@ const Admin = () => {
   const [editingPrices, setEditingPrices] = useState({});
   const [requests, setRequests] = useState([]);
   const [tab, setTab] = useState("Dashboard");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
 
   const fetchOrders = async () => {
@@ -747,40 +738,20 @@ const Admin = () => {
 
   const handleRequestResponse = async (requestId, status, adminResponse) => {
     try {
-      console.log('=== HANDLE REQUEST RESPONSE ===');
-      console.log('requestId:', requestId);
-      console.log('status:', status);
-      console.log('adminResponse:', adminResponse);
-      console.log('Current requests before:', requests.length);
-      
       const response = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
         method: "PUT",
         body: JSON.stringify({ status, admin_response: adminResponse }),
       });
       
-      console.log('Admin response API status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Admin response error:', errorText);
         throw new Error(`Failed to respond to request: ${errorText}`);
       }
       
-      const responseData = await response.json();
-      console.log('Admin response success:', responseData);
-      
-      // Remove the request from the list since it's no longer pending
-      console.log('Removing request from list...');
-      const newRequests = requests.filter(req => req.id !== requestId);
-      console.log('Requests after filter:', newRequests.length);
-      setRequests(newRequests);
-      
-      console.log('Fetching updated orders...');
-      await fetchOrders(); // Refresh orders in case status changed
-      
-      console.log('✅ handleRequestResponse completed');
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+      await fetchOrders();
     } catch (error) {
-      console.error("❌ Error responding to request:", error);
+      console.error("Error responding to request:", error);
     }
   };
 
@@ -942,7 +913,11 @@ const Admin = () => {
   // Filtered orders
   const uniqueUsers = useMemo(() => [...new Set(orders.map(o => o.user_email))], [orders]);
   const filteredOrders = useMemo(() => orders.filter(o => {
-    const statusMatch = filterStatus === "all" || (o.status || "pending") === filterStatus;
+    const status = o.status || "pending";
+    let statusMatch;
+    if (filterStatus === "all") statusMatch = true;
+    else if (filterStatus === "not_delivered") statusMatch = status !== "delivered";
+    else statusMatch = status === filterStatus;
     const userMatch = filterUser === "all" || o.user_email === filterUser;
     return statusMatch && userMatch;
   }), [orders, filterStatus, filterUser]);
@@ -981,14 +956,14 @@ const Admin = () => {
         <div>
           {/* Stat cards */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
-            <StatCard label="Total Orders" value={stats.total} color="#3b82f6" />
+            <StatCard label="Total Órdenes" value={stats.total} color="#3b82f6" />
             <StatCard label="Pendientes" value={stats.pending} color="#f59e0b" />
             <StatCard label="En Progreso" value={stats.inProgress} color="#3b82f6" />
             <StatCard label="Entregadas" value={stats.delivered} color="#22c55e" />
-            <StatCard label="Customers" value={stats.uniqueUsers} color="#8b5cf6" />
-            <StatCard label="Total Items" value={stats.totalItems} color="#06b6d4" />
+            <StatCard label="Clientes" value={stats.uniqueUsers} color="#8b5cf6" />
+            <StatCard label="Total Productos" value={stats.totalItems} color="#06b6d4" />
             {stats.revenue !== null && (
-              <StatCard label="Revenue (est.)" value={formatMXN(stats.revenue)} color="#10b981" />
+              <StatCard label="Ingreso (est.)" value={formatMXN(stats.revenue)} color="#10b981" />
             )}
           </div>
 
@@ -998,8 +973,8 @@ const Admin = () => {
               flex: 1, minWidth: "280px", background: "#fff", border: "1px solid #e5e7eb",
               borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
             }}>
-              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Top Products Ordered</h3>
-              {topProducts.length === 0 ? <p style={{ color: "#9ca3af" }}>No data yet</p> : (
+              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Productos Más Pedidos</h3>
+              {topProducts.length === 0 ? <p style={{ color: "#9ca3af" }}>Sin datos aún</p> : (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={topProducts} layout="vertical" margin={{ left: 10 }}>
                     <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
@@ -1017,8 +992,8 @@ const Admin = () => {
               flex: 1, minWidth: "280px", background: "#fff", border: "1px solid #e5e7eb",
               borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
             }}>
-              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Orders per Customer</h3>
-              {ordersPerUser.length === 0 ? <p style={{ color: "#9ca3af" }}>No data yet</p> : (
+              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Órdenes por Cliente</h3>
+              {ordersPerUser.length === 0 ? <p style={{ color: "#9ca3af" }}>Sin datos aún</p> : (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={ordersPerUser} margin={{ left: 0 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -1042,6 +1017,7 @@ const Admin = () => {
           <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
               style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
+              <option value="not_delivered">No entregadas</option>
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="in_progress">En Progreso</option>
@@ -1049,19 +1025,19 @@ const Admin = () => {
             </select>
             <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
               style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
-              <option value="all">All customers</option>
+              <option value="all">Todos los clientes</option>
               {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
 
           {/* Orders grouped by user */}
           {Object.keys(ordersByUser).length === 0 ? (
-            <p style={{ color: "#9ca3af" }}>No orders match the filter.</p>
+            <p style={{ color: "#9ca3af" }}>No hay órdenes que coincidan con el filtro.</p>
           ) : (
             Object.entries(ordersByUser).map(([email, userOrders]) => (
               <div key={email} style={{ marginBottom: "24px" }}>
                 <h3 style={{ fontSize: "15px", color: "#6b7280", marginBottom: "10px" }}>
-                  {email} — {userOrders.length} order{userOrders.length > 1 ? "s" : ""}
+                  {email} — {userOrders.length} {userOrders.length > 1 ? "órdenes" : "orden"}
                 </h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {userOrders.map(order => (
@@ -1070,7 +1046,7 @@ const Admin = () => {
                       padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                        <span style={{ fontWeight: 600, color: "#374151" }}>Order #{order.id}</span>
+                        <span style={{ fontWeight: 600, color: "#374151" }}>Orden #{order.id}</span>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                           {catalog.length > 0 && (
                             <span style={{ fontWeight: 700, color: "#22c55e" }}>

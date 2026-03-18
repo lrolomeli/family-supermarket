@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
@@ -417,7 +417,7 @@ const MyOrders = () => {
                       </select>
                       <button onClick={() => handleDeleteProduct(order.id, index)}
                         style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "18px" }}
-                        title="Remove item">✕</button>
+                        title="Eliminar producto">✕</button>
                     </div>
                   ))}
                   <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>

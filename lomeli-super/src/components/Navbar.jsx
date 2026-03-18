@@ -1,4 +1,3 @@
-import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
@@ -18,7 +17,7 @@ const Navbar = ({ user, isAdmin }) => {
       <Link to="/favorites">⭐ Favoritos</Link>
       {isAdmin && <Link to="/admin">Admin</Link>}
       <span style={{ marginLeft: "auto" }}>{user?.email}</span>
-      <button onClick={handleLogout}>Logout</button>
+      <button onClick={handleLogout}>Cerrar sesión</button>
     </nav>
   );
 };
