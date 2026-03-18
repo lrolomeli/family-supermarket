@@ -99,21 +99,31 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || "
 
 // Registra al usuario en postgres si es la primera vez que hace login
 const syncUser = async (uid, email) => {
-  const isAdmin = email && ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = !!(email && ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
   
   // Check if a user with this email already exists (e.g. local user logging in via Google)
-  const { rows: existing } = await pool.query("SELECT uid FROM users WHERE email = $1", [email]);
+  const { rows: existing } = await pool.query("SELECT uid, is_admin, is_approved FROM users WHERE email = $1", [email]);
   
   if (existing.length && existing[0].uid !== uid) {
     // Same email, different uid — update the existing row to use the new uid
+    const newAdmin = existing[0].is_admin || isAdmin;
+    const newApproved = existing[0].is_approved || isAdmin;
     await pool.query(
-      "UPDATE users SET uid = $1, is_admin = GREATEST(is_admin::int, $2::int)::boolean, is_approved = GREATEST(is_approved::int, $2::int)::boolean WHERE email = $3",
-      [uid, isAdmin, email]
+      "UPDATE users SET uid = $1, is_admin = $2, is_approved = $3 WHERE email = $4",
+      [uid, newAdmin, newApproved, email]
     );
+  } else if (existing.length) {
+    // Same uid — just ensure admin/approved flags
+    if (isAdmin) {
+      await pool.query(
+        "UPDATE users SET is_admin = true, is_approved = true WHERE uid = $1",
+        [uid]
+      );
+    }
   } else {
+    // New user
     await pool.query(
-      `INSERT INTO users (uid, email, is_admin, is_approved) VALUES ($1, $2, $3, $3)
-       ON CONFLICT (uid) DO UPDATE SET is_admin = GREATEST(users.is_admin::int, $3::int)::boolean, is_approved = GREATEST(users.is_approved::int, $3::int)::boolean`,
+      "INSERT INTO users (uid, email, is_admin, is_approved) VALUES ($1, $2, $3, $3)",
       [uid, email, isAdmin]
     );
   }
