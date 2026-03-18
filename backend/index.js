@@ -598,12 +598,28 @@ server.post("/orders/:id/requests", authenticate, async (req, res) => {
       return res.status(400).send("Requests only allowed for orders in progress");
     }
     
-    const { rows } = await pool.query(
-      "INSERT INTO order_requests (order_id, uid, request_type, message, proposed_changes) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [orderId, req.user.uid, request_type, message, JSON.stringify(proposed_changes)]
+    // Check if there's already a pending request for this order and replace it
+    const { rows: existingRequest } = await pool.query(
+      "SELECT id FROM order_requests WHERE order_id = $1 AND status = 'pending'",
+      [orderId]
     );
     
-    res.status(201).json(rows[0]);
+    let result;
+    if (existingRequest.length > 0) {
+      // Replace existing pending request
+      result = await pool.query(
+        "UPDATE order_requests SET request_type = $1, message = $2, proposed_changes = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *",
+        [request_type, message, JSON.stringify(proposed_changes), existingRequest[0].id]
+      );
+    } else {
+      // Create new request
+      result = await pool.query(
+        "INSERT INTO order_requests (order_id, uid, request_type, message, proposed_changes) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+        [orderId, req.user.uid, request_type, message, JSON.stringify(proposed_changes)]
+      );
+    }
+    
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error("Error creating order request:", error);
     res.status(500).send(error.message);

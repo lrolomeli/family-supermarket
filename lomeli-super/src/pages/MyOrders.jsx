@@ -178,21 +178,6 @@ const MyOrders = () => {
   };
 
   const handleRequestChange = async (orderId, requestType = "modify", editedProductsData = null) => {
-    // Check if there's already a pending request for this order
-    try {
-      const checkResponse = await apiFetch(`${API_BASE_URL}/orders/${orderId}/requests`);
-      const existingRequests = await checkResponse.json();
-      
-      const pendingRequest = existingRequests.find(req => req.status === 'pending');
-      if (pendingRequest) {
-        setError("Ya tienes una solicitud pendiente para este pedido. Espera la respuesta del administrador.");
-        setTimeout(() => setError(""), 5000);
-        return;
-      }
-    } catch (error) {
-      console.error("Error checking existing requests:", error);
-    }
-
     let message = "";
     
     if (requestType === "modify" && editedProductsData) {
