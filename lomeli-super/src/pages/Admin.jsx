@@ -46,7 +46,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
     name: "",
     price_piece: "",
     price_kg: "",
-    category: "general"
+    category: categories[0]?.name || "general"
   });
   const [imageFile, setImageFile] = useState(null);
   const [editImageFile, setEditImageFile] = useState(null);
@@ -79,7 +79,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
     
     try {
       await onAddProduct(newProduct, imageFile);
-      setNewProduct({ name: "", price_piece: "", price_kg: "", category: "general" });
+      setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general" });
       setImageFile(null);
       setShowAddForm(false);
     } catch (error) {
@@ -226,7 +226,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
             </button>
             <button onClick={() => {
               setShowAddForm(false);
-              setNewProduct({ name: "", price_piece: "", price_kg: "", category: "general" });
+              setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general" });
               setImageFile(null);
             }} style={{
               padding: "8px 20px", background: "#f3f4f6", color: "#374151",
@@ -327,7 +327,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                   Category
                 </label>
                 <select
-                  value={editingProduct.category || 'general'}
+                  value={editingProduct.category || categories[0]?.name || 'general'}
                   onChange={e => setEditingProduct({...editingProduct, category: e.target.value})}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
                 >
