@@ -726,6 +726,26 @@ server.get("/orders/:id/requests", authenticate, async (req, res) => {
   }
 });
 
+// DELETE /admin/requests/cleanup - clear all pending requests (admin only)
+server.delete("/admin/requests/cleanup", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { rows: deleted } = await pool.query(
+      "DELETE FROM order_requests WHERE status = 'pending' RETURNING id, order_id"
+    );
+    
+    res.status(200).json({ 
+      message: `Deleted ${deleted.length} pending requests`,
+      deleted: deleted 
+    });
+  } catch (error) {
+    console.error("Error cleaning up requests:", error);
+    res.status(500).send(error.message);
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, async () => {
   await runSetup(pool);

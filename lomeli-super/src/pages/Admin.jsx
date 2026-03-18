@@ -488,6 +488,25 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
     setResponse("");
   };
 
+  const handleCleanup = async () => {
+    if (!confirm("¿Eliminar todas las solicitudes pendientes? Esta acción no se puede deshacer.")) return;
+    
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/admin/requests/cleanup`, {
+        method: "DELETE"
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Se eliminaron ${data.deleted.length} solicitudes pendientes`);
+        window.location.reload(); // Refresh to update the list
+      }
+    } catch (error) {
+      console.error("Error cleaning up requests:", error);
+      alert("Error al limpiar solicitudes");
+    }
+  };
+
   const getRequestTypeLabel = (type) => {
     switch(type) {
       case 'modify': return 'Modificar pedido';
@@ -499,7 +518,17 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
 
   return (
     <div>
-      <h3 style={{ marginBottom: "20px", fontSize: "18px", color: "#374151" }}>Solicitudes Pendientes</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h3 style={{ fontSize: "18px", color: "#374151", margin: 0 }}>Solicitudes Pendientes</h3>
+        {requests.length > 0 && (
+          <button onClick={handleCleanup} style={{
+            padding: "6px 16px", background: "#ef4444", color: "#fff",
+            border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+          }}>
+            Limpiar Todo
+          </button>
+        )}
+      </div>
       
       {requests.length === 0 ? (
         <div style={{

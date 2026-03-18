@@ -232,10 +232,12 @@ const MyOrders = () => {
         if (requestType === "modify" && editedProductsData) {
           setSuccess("✅ Los cambios fueron enviados al administrador. Si los aprueba, tu pedido será actualizado. Contacta al administrador para agilizar el proceso.");
           setEditingOrderId(null); // Exit edit mode after sending request
+          // Keep message longer for important notifications
+          setTimeout(() => setSuccess(""), 15000); // 15 seconds
         } else {
           setSuccess("✅ Solicitud enviada al administrador. Te notificaremos cuando responda.");
+          setTimeout(() => setSuccess(""), 10000); // 10 seconds
         }
-        setTimeout(() => setSuccess(""), 6000);
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo enviar la solicitud");
@@ -259,18 +261,38 @@ const MyOrders = () => {
       {error && (
         <div style={{
           marginBottom: "16px", padding: "12px 16px", borderRadius: "8px",
-          backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626"
+          backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626",
+          display: "flex", justifyContent: "space-between", alignItems: "center"
         }}>
-          ⚠️ {error}
+          <span>⚠️ {error}</span>
+          <button 
+            onClick={() => setError("")}
+            style={{
+              background: "none", border: "none", color: "#dc2626", 
+              cursor: "pointer", fontSize: "18px", padding: "0"
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
       
       {success && (
         <div style={{
           marginBottom: "16px", padding: "12px 16px", borderRadius: "8px",
-          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a"
+          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a",
+          display: "flex", justifyContent: "space-between", alignItems: "center"
         }}>
-          ✅ {success}
+          <span>✅ {success}</span>
+          <button 
+            onClick={() => setSuccess("")}
+            style={{
+              background: "none", border: "none", color: "#16a34a", 
+              cursor: "pointer", fontSize: "18px", padding: "0"
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
 
