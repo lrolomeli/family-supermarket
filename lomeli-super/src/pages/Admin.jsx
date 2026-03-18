@@ -39,10 +39,11 @@ const TAB_DISPLAY_NAMES = {
   "Orders": "Órdenes", 
   "Users": "Usuarios",
   "Prices": "Productos",
-  "Categories": "Categorías"
+  "Categories": "Categorías",
+  "Requests": "Solicitudes"
 };
 
-const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories"];
+const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories", "Requests"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
   const [search, setSearch] = useState("");
@@ -470,12 +471,174 @@ const CategoriesTab = ({ categories, onAddCategory }) => {
   );
 };
 
+const RequestsTab = ({ requests, onRequestResponse }) => {
+  const [respondingTo, setRespondingTo] = useState(null);
+  const [response, setResponse] = useState("");
+
+  const handleRespond = (request) => {
+    setRespondingTo(request.id);
+    setResponse("");
+  };
+
+  const submitResponse = async (status) => {
+    if (!respondingTo) return;
+    
+    await onRequestResponse(respondingTo, status, response);
+    setRespondingTo(null);
+    setResponse("");
+  };
+
+  const getRequestTypeLabel = (type) => {
+    switch(type) {
+      case 'modify': return 'Modificar pedido';
+      case 'cancel': return 'Cancelar pedido';
+      case 'add_items': return 'Agregar productos';
+      default: return type;
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      pending: { bg: '#fef3c7', color: '#92400e' },
+      approved: { bg: '#dcfce7', color: '#166534' },
+      rejected: { bg: '#fef2f2', color: '#dc2626' },
+      completed: { bg: '#f3f4f6', color: '#374151' }
+    };
+    const style = colors[status] || colors.pending;
+    return (
+      <span style={{
+        padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 600,
+        backgroundColor: style.bg, color: style.color
+      }}>
+        {status === 'pending' ? 'Pendiente' : 
+         status === 'approved' ? 'Aprobada' :
+         status === 'rejected' ? 'Rechazada' : 'Completada'}
+      </span>
+    );
+  };
+
+  return (
+    <div>
+      <h3 style={{ marginBottom: "20px", fontSize: "18px", color: "#374151" }}>Solicitudes de Clientes</h3>
+      
+      {requests.length === 0 ? (
+        <div style={{
+          textAlign: "center", padding: "48px", background: "#f9fafb",
+          borderRadius: "12px", border: "1px solid #e5e7eb"
+        }}>
+          <p style={{ fontSize: "16px", color: "#6b7280" }}>No hay solicitudes pendientes</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {requests.map((request) => (
+            <div key={request.id} style={{
+              background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+              padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+            }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div>
+                  <span style={{ fontWeight: 600, color: "#374151" }}>Orden #{request.order_id}</span>
+                  <span style={{ margin: "0 12px", color: "#9ca3af" }}>•</span>
+                  <span style={{ color: "#6b7280" }}>{request.user_email}</span>
+                  <span style={{ margin: "0 12px", color: "#9ca3af" }}>•</span>
+                  {getStatusBadge(request.status)}
+                </div>
+                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                  {new Date(request.created_at).toLocaleString('es-MX')}
+                </div>
+              </div>
+
+              {/* Request Type */}
+              <div style={{ marginBottom: "8px" }}>
+                <span style={{
+                  padding: "4px 8px", borderRadius: "6px", fontSize: "12px",
+                  background: "#f3f4f6", color: "#374151", fontWeight: 500
+                }}>
+                  {getRequestTypeLabel(request.request_type)}
+                </span>
+              </div>
+
+              {/* Message */}
+              <div style={{ marginBottom: "12px" }}>
+                <p style={{ margin: "0", color: "#374151", lineHeight: "1.5" }}>
+                  {request.message}
+                </p>
+              </div>
+
+              {/* Admin Response */}
+              {request.admin_response && (
+                <div style={{
+                  marginBottom: "12px", padding: "12px", borderRadius: "8px",
+                  backgroundColor: "#f8fafc", border: "1px solid #e2e8f0"
+                }}>
+                  <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Tu respuesta:</div>
+                  <p style={{ margin: "0", color: "#334155" }}>{request.admin_response}</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              {request.status === 'pending' && respondingTo !== request.id && (
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={() => handleRespond(request)} style={{
+                    padding: "6px 16px", background: "#3b82f6", color: "#fff",
+                    border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                  }}>
+                    Responder
+                  </button>
+                </div>
+              )}
+
+              {/* Response Form */}
+              {respondingTo === request.id && (
+                <div style={{ marginTop: "12px", padding: "12px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
+                  <textarea
+                    value={response}
+                    onChange={(e) => setResponse(e.target.value)}
+                    placeholder="Escribe tu respuesta al cliente..."
+                    style={{
+                      width: "100%", minHeight: "80px", padding: "8px",
+                      borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px",
+                      resize: "vertical", marginBottom: "8px"
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button onClick={() => submitResponse('approved')} style={{
+                      padding: "6px 16px", background: "#22c55e", color: "#fff",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                    }}>
+                      Aprobar
+                    </button>
+                    <button onClick={() => submitResponse('rejected')} style={{
+                      padding: "6px 16px", background: "#ef4444", color: "#fff",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                    }}>
+                      Rechazar
+                    </button>
+                    <button onClick={() => { setRespondingTo(null); setResponse(""); }} style={{
+                      padding: "6px 16px", background: "#f3f4f6", color: "#374151",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
+                    }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [catalog, setCatalog] = useState([]);
   const [categories, setCategories] = useState([]);
   const [editingPrices, setEditingPrices] = useState({});
+  const [requests, setRequests] = useState([]);
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterUser, setFilterUser] = useState("all");
@@ -508,10 +671,21 @@ const Admin = () => {
     }
   };
 
+  const fetchRequests = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/admin/requests`);
+      const data = await res.json();
+      setRequests(data);
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
     fetchUsers();
     fetchCategories();
+    fetchRequests();
     fetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => {
@@ -540,6 +714,19 @@ const Admin = () => {
       await fetchOrders();
     } catch (error) {
       console.error("Error updating order status:", error);
+    }
+  };
+
+  const handleRequestResponse = async (requestId, status, adminResponse) => {
+    try {
+      await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
+        method: "PUT",
+        body: JSON.stringify({ status, admin_response }),
+      });
+      await fetchRequests();
+      await fetchOrders(); // Refresh orders in case status changed
+    } catch (error) {
+      console.error("Error responding to request:", error);
     }
   };
 
@@ -943,6 +1130,14 @@ const Admin = () => {
         <CategoriesTab
           categories={categories}
           onAddCategory={handleAddCategory}
+        />
+      )}
+
+      {/* REQUESTS TAB */}
+      {tab === "Requests" && (
+        <RequestsTab
+          requests={requests}
+          onRequestResponse={handleRequestResponse}
         />
       )}
     </div>
