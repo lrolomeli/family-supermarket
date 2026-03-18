@@ -36,10 +36,18 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
 
 const TABS = ["Dashboard", "Orders", "Users", "Prices"];
 
-const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload }) => {
+const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories }) => {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [csvStatus, setCsvStatus] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    price_piece: "",
+    price_kg: "",
+    category: "general"
+  });
+  const [imageFile, setImageFile] = useState(null);
 
   const filtered = catalog.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -62,6 +70,25 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
       setCsvStatus("error");
     }
     e.target.value = "";
+  };
+
+  const handleAddProduct = async () => {
+    if (!newProduct.name.trim()) return;
+    
+    try {
+      await onAddProduct(newProduct, imageFile);
+      setNewProduct({ name: "", price_piece: "", price_kg: "", category: "general" });
+      setImageFile(null);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Error adding product:", error);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (confirm("¿Estás seguro de eliminar este producto?")) {
+      await onDeleteProduct(productId);
+    }
   };
 
   return (
@@ -97,6 +124,12 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
         >
           Export CSV
         </a>
+        <button onClick={() => setShowAddForm(!showAddForm)} style={{
+          padding: "7px 18px", background: "#8b5cf6", color: "#fff",
+          border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+        }}>
+          {showAddForm ? "Cancel" : "Add Product"}
+        </button>
       </div>
       {csvStatus === "ok" && <p style={{ color: "#22c55e", marginBottom: "10px", fontSize: "13px" }}>✅ CSV importado correctamente</p>}
       {csvStatus === "error" && <p style={{ color: "#ef4444", marginBottom: "10px", fontSize: "13px" }}>❌ Error al importar CSV</p>}
@@ -104,6 +137,73 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
       <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "12px" }}>
         Formato CSV: columnas <code>id, name, price_piece, price_kg</code>
       </p>
+
+      {/* Add Product Form */}
+      {showAddForm && (
+        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Add New Product</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "16px" }}>
+            <input
+              placeholder="Product name"
+              value={newProduct.name}
+              onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+            />
+            <input
+              type="number"
+              placeholder="Price per piece"
+              value={newProduct.price_piece}
+              onChange={e => setNewProduct({...newProduct, price_piece: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+            />
+            <input
+              type="number"
+              placeholder="Price per kg"
+              value={newProduct.price_kg}
+              onChange={e => setNewProduct({...newProduct, price_kg: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+            />
+            <select
+              value={newProduct.category}
+              onChange={e => setNewProduct({...newProduct, category: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+            >
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
+              Product Image (optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={e => setImageFile(e.target.files[0])}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px", width: "100%" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button onClick={handleAddProduct} style={{
+              padding: "8px 20px", background: "#8b5cf6", color: "#fff",
+              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+            }}>
+              Add Product
+            </button>
+            <button onClick={() => {
+              setShowAddForm(false);
+              setNewProduct({ name: "", price_piece: "", price_kg: "", category: "general" });
+              setImageFile(null);
+            }} style={{
+              padding: "8px 20px", background: "#f3f4f6", color: "#374151",
+              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+            }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
@@ -113,7 +213,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
               <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Producto</th>
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / pieza</th>
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / kg</th>
-              <th style={{ padding: "12px 16px" }}></th>
+              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -137,8 +237,12 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                 <td style={{ padding: "10px 16px", textAlign: "center" }}>
                   <button onClick={() => onSaveOne(product.id)} style={{
                     padding: "4px 14px", background: "#f3f4f6", color: "#374151",
-                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
+                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
                   }}>Save</button>
+                  <button onClick={() => handleDeleteProduct(product.id)} style={{
+                    padding: "4px 14px", background: "#fee2e2", color: "#ef4444",
+                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
+                  }}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -153,6 +257,7 @@ const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [catalog, setCatalog] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [editingPrices, setEditingPrices] = useState({});
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -177,9 +282,19 @@ const Admin = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/categories`);
+      setCategories(await res.json());
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
     fetchUsers();
+    fetchCategories();
     fetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => {
@@ -250,6 +365,45 @@ const Admin = () => {
     alert(`✅ ${result.updated} productos actualizados`);
   };
 
+  const handleAddProduct = async (productData, imageFile) => {
+    const formData = new FormData();
+    formData.append("name", productData.name);
+    formData.append("price_piece", productData.price_piece);
+    formData.append("price_kg", productData.price_kg);
+    formData.append("category", productData.category);
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/admin/products`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (res.ok) {
+      const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+      setCatalog(updated);
+      const initial = {};
+      updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
+      setEditingPrices(initial);
+    } else {
+      throw new Error("Failed to add product");
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    await apiFetch(`${API_BASE_URL}/admin/products/${productId}`, {
+      method: "DELETE",
+    });
+    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    setCatalog(updated);
+    const initial = {};
+    updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
+    setEditingPrices(initial);
+  };
+
   // --- Stats ---
   const stats = useMemo(() => {
     const total = orders.length;
@@ -312,7 +466,7 @@ const Admin = () => {
 
   return (
     <div style={{ maxWidth: "960px", margin: "0 auto", padding: "24px 16px" }}>
-      <h2 style={{ marginBottom: "20px" }}>Admin Panel</h2>
+      <h2 style={{ marginBottom: "20px" }}>Panel de Administración</h2>
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
@@ -513,7 +667,9 @@ const Admin = () => {
           onSaveOne={handleSavePrice}
           onSaveAll={handleSaveAll}
           onCsvUpload={handleCsvUpload}
-          apiBaseUrl={API_BASE_URL}
+          onAddProduct={handleAddProduct}
+          onDeleteProduct={handleDeleteProduct}
+          categories={categories}
         />
       )}
     </div>
