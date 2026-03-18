@@ -262,8 +262,29 @@ const FavoritesAndHistory = () => {
   };
 
   return (
-    <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px" }}>
-      <h2 style={{ marginBottom: "20px" }}>Mis Pedidos</h2>
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h1 style={{ margin: 0, fontSize: "24px", color: "#1f2937" }}>⭐ Favoritos e Historial</h1>
+        <button
+          onClick={() => {
+            console.log('Force clearing frontend cache...');
+            setFavorites([]);
+            setOrderHistory([]);
+            loadData();
+          }}
+          style={{
+            padding: "8px 16px",
+            background: "#3b82f6",
+            color: "#fff",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "14px"
+          }}
+        >
+          🔄 Forzar Actualización
+        </button>
+      </div>
 
       {/* Tabs */}
       <div style={{ 
