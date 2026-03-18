@@ -645,7 +645,20 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
       [req.params.id, req.user.uid]
     );
     
-    if (!favorite.length) return res.status(404).send("Favorite not found");
+    console.log('Query result - favorite rows length:', favorite.length);
+    if (favorite.length > 0) {
+      console.log('Found favorite data:', favorite[0]);
+    }
+    
+    if (!favorite.length) {
+      console.log('❌ Favorite not found - checking if any favorites exist for this user');
+      const { rows: allUserFavorites } = await pool.query(
+        "SELECT id, name FROM order_favorites WHERE uid = $1",
+        [req.user.uid]
+      );
+      console.log('User favorites in database:', allUserFavorites);
+      return res.status(404).send("Favorite not found");
+    }
     
     console.log('Found favorite:', favorite[0].id);
     console.log('Products type:', typeof favorite[0].products);
