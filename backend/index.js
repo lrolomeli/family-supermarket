@@ -95,11 +95,14 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL || "";
+
 // Registra al usuario en postgres si es la primera vez que hace login
 const syncUser = async (uid, email) => {
+  const isAdmin = email && ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   await pool.query(
-    `INSERT INTO users (uid, email) VALUES ($1, $2) ON CONFLICT (uid) DO NOTHING`,
-    [uid, email]
+    `INSERT INTO users (uid, email, is_admin, is_approved) VALUES ($1, $2, $3, $3) ON CONFLICT (uid) DO UPDATE SET is_admin = GREATEST(users.is_admin::int, $3::int)::boolean, is_approved = GREATEST(users.is_approved::int, $3::int)::boolean`,
+    [uid, email, isAdmin]
   );
 };
 
