@@ -1,14 +1,13 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Install sharp dependencies for alpine
-RUN apk add --no-cache vips-dev
+# Install build dependencies for sharp
+RUN apk add --no-cache vips-dev build-base python3
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 COPY . .
 
-# Assets directory will be mounted or set via ASSETS_DIR env
 ENV ASSETS_DIR=/app/public
 RUN mkdir -p /app/public/assets
 
