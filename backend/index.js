@@ -388,7 +388,7 @@ server.post("/orders", authenticate, async (req, res) => {
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { products } = req.body;
     const { rows } = await pool.query(
-      "INSERT INTO orders (uid, products) VALUES ($1, $2) RETURNING id",
+      "INSERT INTO orders (uid, products, status) VALUES ($1, $2, 'pending') RETURNING id",
       [req.user.uid, JSON.stringify(products)]
     );
     res.status(201).json({ id: rows[0].id });
@@ -404,11 +404,16 @@ server.put("/orders/:id", authenticate, async (req, res) => {
     const { id } = req.params;
     const { products } = req.body;
     const { rows } = await pool.query(
-      "SELECT uid FROM orders WHERE id = $1",
+      "SELECT uid, status FROM orders WHERE id = $1",
       [id]
     );
     if (!rows.length) return res.status(404).send("Order not found");
     if (rows[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
+    
+    // Check if order can be modified (only pending orders can be edited)
+    if (rows[0].status !== 'pending') {
+      return res.status(403).send("Order cannot be modified - it's already in progress");
+    }
 
     await pool.query("UPDATE orders SET products = $1 WHERE id = $2", [
       JSON.stringify(products),
@@ -426,11 +431,16 @@ server.delete("/orders/:id", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { rows } = await pool.query(
-      "SELECT uid FROM orders WHERE id = $1",
+      "SELECT uid, status FROM orders WHERE id = $1",
       [id]
     );
     if (!rows.length) return res.status(404).send("Order not found");
     if (rows[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
+    
+    // Check if order can be deleted (only pending orders can be deleted)
+    if (rows[0].status !== 'pending') {
+      return res.status(403).send("Order cannot be deleted - it's already in progress");
+    }
 
     await pool.query("DELETE FROM orders WHERE id = $1", [id]);
     res.status(200).send("Order deleted successfully");
@@ -445,11 +455,16 @@ server.delete("/orders/:orderId/products/:productIndex", authenticate, async (re
   try {
     const { orderId, productIndex } = req.params;
     const { rows } = await pool.query(
-      "SELECT uid, products FROM orders WHERE id = $1",
+      "SELECT uid, status, products FROM orders WHERE id = $1",
       [orderId]
     );
     if (!rows.length) return res.status(404).send("Order not found");
     if (rows[0].uid !== req.user.uid) return res.status(403).send("Unauthorized");
+
+    // Check if order can be modified (only pending orders can be edited)
+    if (rows[0].status !== 'pending') {
+      return res.status(403).send("Order cannot be modified - it's already in progress");
+    }
 
     const products = rows[0].products;
     products.splice(Number(productIndex), 1);
@@ -461,6 +476,103 @@ server.delete("/orders/:orderId/products/:productIndex", authenticate, async (re
     res.status(200).send("Item deleted successfully");
   } catch (error) {
     console.error("Error deleting item:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// PUT /admin/orders/:id/status - update order status (admin only)
+server.put("/admin/orders/:id/status", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { status } = req.body;
+    const validStatuses = ['pending', 'in_progress', 'delivered'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).send("Invalid status");
+    }
+
+    const { rows } = await pool.query(
+      "UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
+      [status, req.params.id]
+    );
+    
+    if (!rows.length) return res.status(404).send("Order not found");
+    
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /orders/:id - get specific order with status check
+server.get("/orders/:id", authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE id = $1 AND uid = $2",
+      [req.params.id, req.user.uid]
+    );
+    
+    if (!rows.length) return res.status(404).send("Order not found");
+    
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /favorites - create favorite order
+server.post("/favorites", authenticate, async (req, res) => {
+  try {
+    const { name, products } = req.body;
+    
+    const { rows } = await pool.query(
+      "INSERT INTO favorites (uid, name, products) VALUES ($1, $2, $3) RETURNING *",
+      [req.user.uid, name, JSON.stringify(products)]
+    );
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("Error creating favorite:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// GET /favorites - get user's favorite orders
+server.get("/favorites", authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM favorites WHERE uid = $1 ORDER BY created_at DESC",
+      [req.user.uid]
+    );
+    
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching favorites:", error);
+    res.status(500).send(error.message);
+  }
+});
+
+// POST /favorites/:id/reorder - create order from favorite
+server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
+  try {
+    const { rows: favorite } = await pool.query(
+      "SELECT * FROM favorites WHERE id = $1 AND uid = $2",
+      [req.params.id, req.user.uid]
+    );
+    
+    if (!favorite.length) return res.status(404).send("Favorite not found");
+    
+    const { rows } = await pool.query(
+      "INSERT INTO orders (uid, products, status) VALUES ($1, $2, 'pending') RETURNING *",
+      [req.user.uid, favorite[0].products]
+    );
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error("Error reordering from favorite:", error);
     res.status(500).send(error.message);
   }
 });
