@@ -29,6 +29,7 @@ const MyOrders = () => {
   const [editedProducts, setEditedProducts] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [notification, setNotification] = useState(null);
   const [productCatalog, setProductCatalog] = useState([]);
 
   useEffect(() => {
@@ -39,6 +40,19 @@ const MyOrders = () => {
   }, []);
 
   const user = auth.currentUser;
+
+  const showNotification = (title, message, type = 'success') => {
+    setNotification({
+      title,
+      message,
+      type,
+      timestamp: new Date()
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification(null);
+  };
 
   const refreshOrders = async () => {
     const response = await apiFetch(`${API_BASE_URL}/orders`);
@@ -100,12 +114,13 @@ const MyOrders = () => {
       });
       
       if (response.ok) {
-        setSuccess("¡Pedido actualizado exitosamente!");
+        showNotification(
+          "¡Pedido Actualizado!",
+          "Tu pedido ha sido actualizado exitosamente. Los cambios están listos.",
+          'success'
+        );
         setEditingOrderId(null);
         await refreshOrders();
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(""), 3000);
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo actualizar el pedido");
@@ -230,13 +245,18 @@ const MyOrders = () => {
       
       if (response.ok) {
         if (requestType === "modify" && editedProductsData) {
-          setSuccess("✅ Los cambios fueron enviados al administrador. Si los aprueba, tu pedido será actualizado. Contacta al administrador para agilizar el proceso.");
+          showNotification(
+            "Solicitud Enviada",
+            "Tus cambios han sido enviados al administrador. Si los aprueba, tu pedido será actualizado automáticamente. Contacta al administrador para agilizar el proceso.",
+            'info'
+          );
           setEditingOrderId(null); // Exit edit mode after sending request
-          // Keep message longer for important notifications
-          setTimeout(() => setSuccess(""), 15000); // 15 seconds
         } else {
-          setSuccess("✅ Solicitud enviada al administrador. Te notificaremos cuando responda.");
-          setTimeout(() => setSuccess(""), 10000); // 10 seconds
+          showNotification(
+            "Solicitud Enviada", 
+            "Tu solicitud ha sido enviada al administrador. Te notificaremos cuando responda.",
+            'info'
+          );
         }
       } else {
         const errorData = await response.json();
@@ -396,6 +416,91 @@ const MyOrders = () => {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {notification && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            borderRadius: "12px",
+            padding: "24px",
+            maxWidth: "400px",
+            width: "90%",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+          }}>
+            {/* Icon based on type */}
+            <div style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+              fontSize: "24px",
+              backgroundColor: notification.type === 'success' ? '#dcfce7' : 
+                               notification.type === 'info' ? '#dbeafe' : '#fef2f2',
+              color: notification.type === 'success' ? '#166534' : 
+                     notification.type === 'info' ? '#1d4ed8' : '#dc2626'
+            }}>
+              {notification.type === 'success' ? '✓' : 
+               notification.type === 'info' ? 'ℹ' : '⚠'}
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              margin: "0 0 8px 0",
+              fontSize: "18px",
+              fontWeight: 600,
+              color: "#374151",
+              textAlign: "center"
+            }}>
+              {notification.title}
+            </h3>
+
+            {/* Message */}
+            <p style={{
+              margin: "0 0 20px 0",
+              fontSize: "14px",
+              color: "#6b7280",
+              lineHeight: "1.5",
+              textAlign: "center"
+            }}>
+              {notification.message}
+            </p>
+
+            {/* OK Button */}
+            <button
+              onClick={closeNotification}
+              style={{
+                width: "100%",
+                padding: "12px",
+                backgroundColor: notification.type === 'success' ? '#22c55e' : 
+                               notification.type === 'info' ? '#3b82f6' : '#ef4444',
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       )}
     </div>
