@@ -357,20 +357,24 @@ const FavoritesAndHistory = () => {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {favorites.map((favorite) => (
-                <div key={favorite.id} style={{
-                  background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-                  padding: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                    <div>
-                      <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", color: "#374151" }}>
-                        {favorite.name}
-                      </h3>
-                      <p style={{ margin: "0", fontSize: "12px", color: "#9ca3af" }}>
-                        Guardado el {new Date(favorite.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
+              {favorites.map((favorite, index) => {
+                console.log(`Rendering favorite ${index + 1}:`, favorite);
+                console.log(`Favorite ID: ${favorite.id}, Name: ${favorite.name}, Products:`, favorite.products);
+                
+                return (
+                  <div key={favorite.id} style={{
+                    background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+                    padding: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                      <div>
+                        <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", color: "#374151" }}>
+                          {favorite.name || 'Sin nombre'}
+                        </h3>
+                        <p style={{ margin: "0", fontSize: "12px", color: "#9ca3af" }}>
+                          Guardado el {new Date(favorite.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
                         onClick={() => handleReorder(favorite, false)}
@@ -410,7 +414,8 @@ const FavoritesAndHistory = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
