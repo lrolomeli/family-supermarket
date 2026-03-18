@@ -371,7 +371,7 @@ server.get("/orders", authenticate, async (req, res) => {
     await syncUser(req.user.uid, req.user.email);
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { rows } = await pool.query(
-      "SELECT * FROM orders WHERE uid = $1",
+      "SELECT * FROM orders WHERE uid = $1 AND is_delivered = false ORDER BY created_at DESC",
       [req.user.uid]
     );
     res.status(200).json(rows);
@@ -509,7 +509,18 @@ server.put("/admin/orders/:id/status", authenticate, async (req, res) => {
     
     if (!rows.length) return res.status(404).send("Order not found");
     
-    res.status(200).json(rows[0]);
+    const updatedOrder = rows[0];
+    
+    // If order is marked as delivered, move it to history by updating the is_delivered flag
+    if (status === 'delivered') {
+      await pool.query(
+        "UPDATE orders SET is_delivered = true, delivered_at = CURRENT_TIMESTAMP WHERE id = $1",
+        [req.params.id]
+      );
+      console.log(`Order ${req.params.id} marked as delivered and moved to history`);
+    }
+    
+    res.status(200).json(updatedOrder);
   } catch (error) {
     console.error("Error updating order status:", error);
     res.status(500).send(error.message);
