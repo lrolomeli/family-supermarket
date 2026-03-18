@@ -1,14 +1,17 @@
 import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { clearLocalAuth } from "../api";
 
 const Pending = () => {
   const navigate = useNavigate();
   const user = auth.currentUser;
 
   const handleLogout = async () => {
+    clearLocalAuth();
     await signOut(auth);
     navigate("/login");
+    window.location.reload();
   };
 
   return (
