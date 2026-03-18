@@ -620,10 +620,18 @@ server.post("/favorites", authenticate, async (req, res) => {
 // GET /favorites - get user's favorite orders
 server.get("/favorites", authenticate, async (req, res) => {
   try {
+    console.log('=== GET /favorites DEBUG ===');
+    console.log('User UID:', req.user.uid);
+    
     const { rows } = await pool.query(
-      "SELECT * FROM favorites WHERE uid = $1 ORDER BY created_at DESC",
+      "SELECT * FROM order_favorites WHERE uid = $1 ORDER BY created_at DESC",
       [req.user.uid]
     );
+    
+    console.log('Favorites query result:', rows.length, 'items');
+    rows.forEach((fav, i) => {
+      console.log(`  ${i + 1}. ID: ${fav.id}, Name: ${fav.name}`);
+    });
     
     res.status(200).json(rows);
   } catch (error) {
@@ -918,20 +926,6 @@ server.delete("/admin/requests/cleanup", authenticate, async (req, res) => {
 });
 
 // ORDER FAVORITES API
-
-// GET /favorites - get user's favorite orders
-server.get("/favorites", authenticate, async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM order_favorites WHERE uid = $1 ORDER BY created_at DESC",
-      [req.user.uid]
-    );
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error("Error fetching favorites:", error);
-    res.status(500).send(error.message);
-  }
-});
 
 // POST /favorites - create new favorite order
 server.post("/favorites", authenticate, async (req, res) => {
