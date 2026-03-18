@@ -94,10 +94,15 @@ const FavoritesAndHistory = () => {
 
   const handleReorder = async (order, isHistory = false) => {
     try {
+      console.log('=== FRONTEND REORDER DEBUG ===');
+      console.log('isHistory:', isHistory);
+      console.log('order:', order);
+      
       let response;
       
       if (isHistory) {
         // Create new order from history
+        console.log('Calling POST /orders for history reorder');
         response = await apiFetch(`${API_BASE_URL}/orders`, {
           method: "POST",
           body: JSON.stringify({
@@ -106,13 +111,20 @@ const FavoritesAndHistory = () => {
         });
       } else {
         // Create new order from favorite
+        console.log('Calling POST /favorites/:id/reorder for favorite reorder');
         response = await apiFetch(`${API_BASE_URL}/favorites/${order.id}/reorder`, {
           method: "POST"
         });
       }
       
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       if (response.ok) {
         const newOrder = await response.json();
+        console.log('New order received:', newOrder);
+        console.log('New order ID:', newOrder.id);
+        
         showNotification(
           "Pedido Creado",
           `Nuevo pedido #${newOrder.id} creado exitosamente!`,
@@ -128,9 +140,14 @@ const FavoritesAndHistory = () => {
           const errorText = await response.text();
           errorMessage = errorText || errorMessage;
         }
+        console.log('Error response:', errorMessage);
         setError(errorMessage);
       }
     } catch (error) {
+      console.log('=== FRONTEND CATCH BLOCK ===');
+      console.log('Error caught:', error);
+      console.log('Error message:', error.message);
+      console.log('Error stack:', error.stack);
       setError("Error de conexión. Intenta nuevamente.");
       console.error("Error reordering:", error);
     }
