@@ -880,7 +880,7 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
     // Create new order from favorite
     const { rows } = await pool.query(
       "INSERT INTO orders (uid, products, status, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *",
-      [req.user.uid, favorite[0].products, 'pending']
+      [req.user.uid, JSON.stringify(favorite[0].products), 'pending']
     );
     
     res.status(201).json(rows[0]);
