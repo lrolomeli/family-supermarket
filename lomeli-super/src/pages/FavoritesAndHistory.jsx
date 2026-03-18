@@ -115,10 +115,15 @@ const FavoritesAndHistory = () => {
           'success'
         );
         
-        // Refresh favorites if we're on the favorites tab
-        if (activeTab === 'favorites') {
-          console.log('Refreshing favorites data...');
-          loadData();
+        // Refresh favorites data specifically
+        console.log('Refreshing favorites data...');
+        try {
+          const response = await apiFetch(`${API_BASE_URL}/favorites?t=${Date.now()}`);
+          const data = await response.json();
+          console.log('Favorites refreshed:', data);
+          setFavorites(data);
+        } catch (error) {
+          console.error('Error refreshing favorites:', error);
         }
       } else {
         let errorMessage = "No se pudo guardar el favorito";
