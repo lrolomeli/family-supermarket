@@ -38,6 +38,9 @@ const FavoritesAndHistory = () => {
 
   useEffect(() => {
     if (!user) return;
+    // Clear any stale data on user change or initial load
+    setFavorites([]);
+    setOrderHistory([]);
     loadData().catch((e) => console.error("Error loading data:", e));
   }, [user, activeTab]);
 
@@ -46,14 +49,25 @@ const FavoritesAndHistory = () => {
     setError("");
     setSuccess("");
     
+    // Clear state immediately to prevent stale data showing
+    if (activeTab === 'favorites') {
+      setFavorites([]);
+    } else {
+      setOrderHistory([]);
+    }
+    
     try {
       if (activeTab === 'favorites') {
-        const response = await apiFetch(`${API_BASE_URL}/favorites`);
+        // Add cache-busting timestamp
+        const response = await apiFetch(`${API_BASE_URL}/favorites?t=${Date.now()}`);
         const data = await response.json();
+        console.log('Favorites data loaded:', data);
         setFavorites(data);
       } else {
-        const response = await apiFetch(`${API_BASE_URL}/orders/history`);
+        // Add cache-busting timestamp
+        const response = await apiFetch(`${API_BASE_URL}/orders/history?t=${Date.now()}`);
         const data = await response.json();
+        console.log('History data loaded:', data);
         setOrderHistory(data);
       }
     } catch (error) {
@@ -263,28 +277,7 @@ const FavoritesAndHistory = () => {
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h1 style={{ margin: 0, fontSize: "24px", color: "#1f2937" }}>⭐ Favoritos e Historial</h1>
-        <button
-          onClick={() => {
-            console.log('Force clearing frontend cache...');
-            setFavorites([]);
-            setOrderHistory([]);
-            loadData();
-          }}
-          style={{
-            padding: "8px 16px",
-            background: "#3b82f6",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px"
-          }}
-        >
-          🔄 Forzar Actualización
-        </button>
-      </div>
+      <h1 style={{ margin: "0 0 20px 0", fontSize: "24px", color: "#1f2937" }}>⭐ Favoritos e Historial</h1>
 
       {/* Tabs */}
       <div style={{ 
