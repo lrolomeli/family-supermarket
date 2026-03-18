@@ -57,8 +57,18 @@ const MyOrders = () => {
   };
 
   const handleCancelEdit = () => {
-    setEditingOrderId(null);
-    setEditedProducts([]);
+    if (editedProducts.length === 0) {
+      setEditingOrderId(null);
+      setEditedProducts([]);
+      return;
+    }
+    
+    if (confirm("¿Cancelar la edición? Se perderán los cambios no guardados.")) {
+      setEditingOrderId(null);
+      setEditedProducts([]);
+      setError("");
+      setSuccess("");
+    }
   };
 
   const handleProductChange = (index, field, value) => {
@@ -100,6 +110,20 @@ const MyOrders = () => {
     setError("");
     setSuccess("");
     
+    // If we're in edit mode, just remove from local state with confirmation
+    if (editingOrderId === orderId) {
+      const product = editedProducts[productIndex];
+      if (!confirm(`¿Eliminar "${product.name}" del pedido?`)) {
+        return;
+      }
+      
+      setEditedProducts(prev => prev.filter((_, i) => i !== productIndex));
+      setSuccess("Producto eliminado. Guarda los cambios para aplicar.");
+      setTimeout(() => setSuccess(""), 3000);
+      return;
+    }
+    
+    // Otherwise, call the API directly
     try {
       const response = await apiFetch(
         `${API_BASE_URL}/orders/${orderId}/products/${productIndex}`,
