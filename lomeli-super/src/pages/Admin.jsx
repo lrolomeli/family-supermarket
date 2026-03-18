@@ -497,29 +497,9 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const colors = {
-      pending: { bg: '#fef3c7', color: '#92400e' },
-      approved: { bg: '#dcfce7', color: '#166534' },
-      rejected: { bg: '#fef2f2', color: '#dc2626' },
-      completed: { bg: '#f3f4f6', color: '#374151' }
-    };
-    const style = colors[status] || colors.pending;
-    return (
-      <span style={{
-        padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 600,
-        backgroundColor: style.bg, color: style.color
-      }}>
-        {status === 'pending' ? 'Pendiente' : 
-         status === 'approved' ? 'Aprobada' :
-         status === 'rejected' ? 'Rechazada' : 'Completada'}
-      </span>
-    );
-  };
-
   return (
     <div>
-      <h3 style={{ marginBottom: "20px", fontSize: "18px", color: "#374151" }}>Solicitudes de Clientes</h3>
+      <h3 style={{ marginBottom: "20px", fontSize: "18px", color: "#374151" }}>Solicitudes Pendientes</h3>
       
       {requests.length === 0 ? (
         <div style={{
@@ -541,8 +521,6 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
                   <span style={{ fontWeight: 600, color: "#374151" }}>Orden #{request.order_id}</span>
                   <span style={{ margin: "0 12px", color: "#9ca3af" }}>•</span>
                   <span style={{ color: "#6b7280" }}>{request.user_email}</span>
-                  <span style={{ margin: "0 12px", color: "#9ca3af" }}>•</span>
-                  {getStatusBadge(request.status)}
                 </div>
                 <div style={{ fontSize: "12px", color: "#9ca3af" }}>
                   {new Date(request.created_at).toLocaleString('es-MX')}
@@ -553,7 +531,7 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
               <div style={{ marginBottom: "8px" }}>
                 <span style={{
                   padding: "4px 8px", borderRadius: "6px", fontSize: "12px",
-                  background: "#f3f4f6", color: "#374151", fontWeight: 500
+                  background: "#fef3c7", color: "#92400e", fontWeight: 500
                 }}>
                   {getRequestTypeLabel(request.request_type)}
                 </span>
@@ -566,19 +544,8 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
                 </p>
               </div>
 
-              {/* Admin Response */}
-              {request.admin_response && (
-                <div style={{
-                  marginBottom: "12px", padding: "12px", borderRadius: "8px",
-                  backgroundColor: "#f8fafc", border: "1px solid #e2e8f0"
-                }}>
-                  <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Tu respuesta:</div>
-                  <p style={{ margin: "0", color: "#334155" }}>{request.admin_response}</p>
-                </div>
-              )}
-
               {/* Actions */}
-              {request.status === 'pending' && respondingTo !== request.id && (
+              {respondingTo !== request.id && (
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={() => handleRespond(request)} style={{
                     padding: "6px 16px", background: "#3b82f6", color: "#fff",
@@ -607,13 +574,13 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
                       padding: "6px 16px", background: "#22c55e", color: "#fff",
                       border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
                     }}>
-                      Aprobar
+                      Aprobar y permitir edición
                     </button>
                     <button onClick={() => submitResponse('rejected')} style={{
                       padding: "6px 16px", background: "#ef4444", color: "#fff",
                       border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
                     }}>
-                      Rechazar
+                      Rechazar (pedido bloqueado)
                     </button>
                     <button onClick={() => { setRespondingTo(null); setResponse(""); }} style={{
                       padding: "6px 16px", background: "#f3f4f6", color: "#374151",
@@ -675,7 +642,8 @@ const Admin = () => {
     try {
       const res = await apiFetch(`${API_BASE_URL}/admin/requests`);
       const data = await res.json();
-      setRequests(data);
+      // Only show pending requests
+      setRequests(data.filter(req => req.status === 'pending'));
     } catch (error) {
       console.error("Error fetching requests:", error);
     }
@@ -723,7 +691,10 @@ const Admin = () => {
         method: "PUT",
         body: JSON.stringify({ status, admin_response }),
       });
-      await fetchRequests();
+      
+      // Remove the request from the list since it's no longer pending
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+      
       await fetchOrders(); // Refresh orders in case status changed
     } catch (error) {
       console.error("Error responding to request:", error);
