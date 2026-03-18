@@ -5,9 +5,11 @@ import apiFetch from "../api";
 import { calcOrderTotal, formatMXN } from "../utils/pricing";
 
 const STATUS_COLORS = {
-  pending:   { bg: "#fff8e1", color: "#f59e0b", label: "Pendiente" },
-  completed: { bg: "#e8f5e9", color: "#22c55e", label: "Completado" },
-  cancelled: { bg: "#fce4ec", color: "#ef4444", label: "Cancelado" },
+  pending:     { bg: "#fff8e1", color: "#f59e0b", label: "Pendiente" },
+  in_progress: { bg: "#dbeafe", color: "#3b82f6", label: "En Progreso" },
+  delivered:   { bg: "#dcfce7", color: "#22c55e", label: "Entregado" },
+  completed:   { bg: "#e8f5e9", color: "#22c55e", label: "Completado" },
+  cancelled:   { bg: "#fce4ec", color: "#ef4444", label: "Cancelado" },
 };
 
 const StatusBadge = ({ status = "pending" }) => {
@@ -63,6 +65,17 @@ const MyOrders = () => {
   useEffect(() => {
     if (!user) return;
     refreshOrders().catch((e) => console.error("Error fetching orders:", e));
+  }, [user]);
+
+  // Add periodic refresh to get latest order status
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      refreshOrders().catch((e) => console.error("Error refreshing orders:", e));
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleEditClick = (order) => {
@@ -275,7 +288,24 @@ const MyOrders = () => {
 
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px" }}>
-      <h2 style={{ marginBottom: "20px" }}>Mis Pedidos</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h2 style={{ margin: 0 }}>Mis Pedidos</h2>
+        <button 
+          onClick={refreshOrders}
+          style={{
+            padding: "8px 16px", 
+            background: "#f3f4f6", 
+            color: "#374151", 
+            border: "1px solid #d1d5db", 
+            borderRadius: "8px", 
+            cursor: "pointer", 
+            fontSize: "14px",
+            fontWeight: 500
+          }}
+        >
+          🔄 Actualizar
+        </button>
+      </div>
 
       {/* Error and Success Messages */}
       {error && (
