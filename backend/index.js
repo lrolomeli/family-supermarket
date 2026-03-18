@@ -32,6 +32,9 @@ const server = express();
 server.use(cors());
 server.use(express.json());
 
+// Serve static files from frontend public folder
+server.use(express.static('../lomeli-super/public'));
+
 // Middleware: verifica el token de Firebase y adjunta el usuario
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
