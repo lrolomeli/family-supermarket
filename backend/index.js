@@ -869,6 +869,10 @@ server.delete("/favorites/:id", authenticate, async (req, res) => {
 // POST /favorites/:id/reorder - create new order from favorite
 server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
   try {
+    console.log('=== FAVORITES REORDER DEBUG ===');
+    console.log('Request params:', req.params);
+    console.log('Request user:', req.user.uid);
+    
     // Get the favorite order
     const { rows: favorite } = await pool.query(
       "SELECT * FROM order_favorites WHERE id = $1 AND uid = $2",
@@ -877,15 +881,36 @@ server.post("/favorites/:id/reorder", authenticate, async (req, res) => {
     
     if (!favorite.length) return res.status(404).send("Favorite not found");
     
+    console.log('Found favorite:', favorite[0].id);
+    console.log('Products type:', typeof favorite[0].products);
+    console.log('Products value:', favorite[0].products);
+    
+    // Prepare products for database
+    let productsJson;
+    if (typeof favorite[0].products === 'string') {
+      productsJson = favorite[0].products;
+      console.log('Products already string, using as-is');
+    } else {
+      productsJson = JSON.stringify(favorite[0].products);
+      console.log('Products converted to JSON string');
+    }
+    
+    console.log('Final products JSON type:', typeof productsJson);
+    console.log('Final products JSON length:', productsJson.length);
+    console.log('Final products JSON preview:', productsJson.substring(0, 100) + '...');
+    
     // Create new order from favorite
     const { rows } = await pool.query(
       "INSERT INTO orders (uid, products, status, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *",
-      [req.user.uid, JSON.stringify(favorite[0].products), 'pending']
+      [req.user.uid, productsJson, 'pending']
     );
     
+    console.log('✅ Order created successfully:', rows[0].id);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error("Error creating order from favorite:", error);
+    console.error("Error details:", error.message);
+    console.error("Error code:", error.code);
     res.status(500).send(error.message);
   }
 });
