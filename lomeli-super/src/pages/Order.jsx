@@ -111,8 +111,6 @@ const Order = () => {
   };
 
   const handleSubmitOrder = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
     setSubmitting(true);
     try {
       const response = await apiFetch(`${API_BASE_URL}/orders`, {
@@ -136,7 +134,7 @@ const Order = () => {
   const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
 
   return (
-    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 12px 100px" }}>
+    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 12px 120px" }}>
       <h2 style={{ margin: "0 0 16px", fontSize: "22px", fontWeight: 800, color: "#15803d" }}>
         Nueva Orden
       </h2>
@@ -184,11 +182,12 @@ const Order = () => {
       {/* Botón flotante del carrito */}
       {cart.length > 0 && (
         <button onClick={() => setShowCart(true)} style={{
-          position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)",
+          position: "fixed", bottom: "max(24px, env(safe-area-inset-bottom, 24px))", left: "50%", transform: "translateX(-50%)",
           background: "#15803d", color: "#fff", border: "none", borderRadius: "999px",
           padding: "14px 28px", fontSize: "15px", fontWeight: 700, cursor: "pointer",
           boxShadow: "0 4px 16px rgba(21,128,61,0.4)", zIndex: 50,
           display: "flex", alignItems: "center", gap: "10px",
+          WebkitTapHighlightColor: "transparent",
         }}>
           🛒 Ver carrito
           <span style={{
