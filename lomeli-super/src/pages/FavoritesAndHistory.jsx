@@ -14,7 +14,9 @@ const FavoritesAndHistory = () => {
   const [success, setSuccess] = useState("");
   const [notification, setNotification] = useState(null);
 
-  const user = auth.currentUser;
+  const firebaseUser = auth.currentUser;
+  const localUser = !firebaseUser ? JSON.parse(localStorage.getItem("local_user") || "null") : null;
+  const isAuthenticated = !!firebaseUser || !!localUser;
 
   const showNotification = (title, message, type = 'success') => {
     setNotification({ title, message, type });
@@ -30,11 +32,11 @@ const FavoritesAndHistory = () => {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isAuthenticated) return;
     setFavorites([]);
     setOrderHistory([]);
     loadData().catch(console.error);
-  }, [user, activeTab]);
+  }, [isAuthenticated, activeTab]);
 
   const loadData = async () => {
     setLoading(true);

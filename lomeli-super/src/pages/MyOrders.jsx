@@ -41,7 +41,10 @@ const MyOrders = () => {
       .catch(console.error);
   }, []);
 
-  const user = auth.currentUser;
+  // Check for local user or Firebase user
+  const firebaseUser = auth.currentUser;
+  const localUser = !firebaseUser ? JSON.parse(localStorage.getItem("local_user") || "null") : null;
+  const isAuthenticated = !!firebaseUser || !!localUser;
 
   const showNotification = (title, message, type = 'success') => {
     setNotification({
@@ -92,21 +95,21 @@ const MyOrders = () => {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!isAuthenticated) return;
     refreshOrders().catch((e) => console.error("Error fetching orders:", e));
-  }, [user]);
+  }, [isAuthenticated]);
 
   // Refresh orders when page becomes visible (user returns to tab)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && user) {
+      if (!document.hidden && isAuthenticated) {
         refreshOrders().catch((e) => console.error("Error refreshing orders on visibility change:", e));
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user]);
+  }, [isAuthenticated]);
 
   const handleEditClick = (order) => {
     // Refresh orders before editing to get latest status
