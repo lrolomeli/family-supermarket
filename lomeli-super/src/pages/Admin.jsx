@@ -720,6 +720,13 @@ const Admin = () => {
         setEditingPrices(initial);
       })
       .catch(console.error);
+
+    // Poll for new orders and requests every 3 minutes
+    const interval = setInterval(() => {
+      fetchOrders();
+      fetchRequests();
+    }, 3 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleApprove = async (uid, approved) => {

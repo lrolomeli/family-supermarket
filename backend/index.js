@@ -13,6 +13,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const runSetup = require("./db/setup");
+const nodemailer = require("nodemailer");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -41,6 +42,31 @@ server.use(express.json());
 // Serve static files - use ASSETS_DIR env var for Docker, fallback for local dev
 const ASSETS_DIR = process.env.ASSETS_DIR || path.join(__dirname, '../lomeli-super/public');
 server.use(express.static(ASSETS_DIR));
+
+// Email notifications
+const emailTransporter = process.env.SMTP_USER ? nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+}) : null;
+
+const sendAdminEmail = async (subject, text) => {
+  if (!emailTransporter) return;
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL;
+  if (!adminEmail) return;
+  try {
+    await emailTransporter.sendMail({
+      from: `"Lomeli Super" <${process.env.SMTP_USER}>`,
+      to: adminEmail,
+      subject,
+      text,
+    });
+  } catch (err) {
+    console.error("Error sending email:", err.message);
+  }
+};
 
 // Image processing helper
 const processImage = async (file, filename) => {
@@ -587,6 +613,15 @@ server.post("/orders", authenticate, async (req, res) => {
       "INSERT INTO orders (uid, products, status) VALUES ($1, $2, 'pending') RETURNING id",
       [req.user.uid, productsJson]
     );
+
+    // Notify admin via email
+    const items = JSON.parse(productsJson);
+    const itemList = items.map(i => `  - ${i.name}: ${i.quantity} ${i.unit === "kg" ? "kg" : "pzs"}`).join("\n");
+    sendAdminEmail(
+      `Nueva orden #${rows[0].id}`,
+      `${req.user.email} ha creado una nueva orden:\n\n${itemList}\n\nRevisa el panel de administración.`
+    );
+
     res.status(201).json({ id: rows[0].id });
   } catch (error) {
     console.error("Error creating order:", error);
@@ -817,6 +852,12 @@ server.post("/orders/:id/requests", authenticate, async (req, res) => {
     }
     
     res.status(201).json(result.rows[0]);
+
+    // Notify admin via email about the change request
+    sendAdminEmail(
+      `Solicitud de cambio - Orden #${orderId}`,
+      `${req.user.email} solicita un cambio en la orden #${orderId}:\n\nTipo: ${request_type}\nMensaje: ${message || "(sin mensaje)"}\n\nRevisa el panel de administración.`
+    );
   } catch (error) {
     console.error("Error creating order request:", error);
     res.status(500).send(error.message);

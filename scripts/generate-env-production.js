@@ -128,6 +128,12 @@ VITE_ADMIN_EMAIL=${frontend.VITE_ADMIN_EMAIL || ""}
 # === Puertos (opcional) ===
 FRONTEND_PORT=80
 BACKEND_PORT=5000
+
+# === Email (opcional - para notificaciones al admin) ===
+# Usa una "App Password" de Google, no tu contraseña normal
+# https://myaccount.google.com/apppasswords
+SMTP_USER=
+SMTP_PASS=
 `;
 
 fs.writeFileSync(OUTPUT, output, "utf8");
