@@ -152,6 +152,22 @@ Al desplegar con la DB vacía, el backend automáticamente:
 
 Si usas Google Sign-In, el email que coincida con `VITE_ADMIN_EMAIL` se promueve a admin automáticamente.
 
+### 7. Notificaciones por email (opcional)
+
+El admin recibe un email cuando un usuario crea una orden o solicita un cambio. Para activarlo, agrega en `.env.production`:
+
+```env
+SMTP_USER=tu-correo@gmail.com
+SMTP_PASS=tu-app-password
+```
+
+Necesitas generar un "App Password" en Google (no uses tu contraseña normal):
+1. Ve a https://myaccount.google.com/apppasswords
+2. Genera una contraseña para "Mail"
+3. Usa esa contraseña en `SMTP_PASS`
+
+Si no configuras estas variables, la app funciona normal sin enviar emails.
+
 ---
 
 ## Funcionalidades
@@ -164,7 +180,8 @@ Si usas Google Sign-In, el email que coincida con `VITE_ADMIN_EMAIL` se promueve
 - Solicitar cambios en órdenes en progreso
 
 **Administrador**
-- Dashboard con estadísticas y gráficas
+- Dashboard con estadísticas y gráficas (auto-refresh cada 3 min)
+- Notificaciones por email de nuevas órdenes y solicitudes de cambio
 - Gestión de órdenes por usuario con cambio de status
 - Editor de precios con búsqueda, guardado individual o masivo
 - Importar/exportar precios en CSV
