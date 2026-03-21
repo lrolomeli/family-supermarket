@@ -109,7 +109,13 @@ INSERT INTO products (id, name, price_piece, price_kg, image, category, sell_by)
   (96, 'Zanahoria',                 5.00, 14.00, NULL, 'verduras', 'both'),
   (97, 'Baby zanahoria (bolsa)',   25.00,  0, NULL, 'verduras',      'pieces'),
   (98, 'Zarzamora (bote 1lt)',     65.00,  0, NULL, 'frutas',        'pieces'),
-  (99, 'Zarzamora (caja)',         45.00,  0, NULL, 'frutas',        'pieces')
+  (99, 'Zarzamora (caja)',         45.00,  0, NULL, 'frutas',        'pieces'),
+  (100, 'Tuna',                    8.00, 25.00, NULL, 'frutas',        'both'),
+  (101, 'Durazno',                12.00, 40.00, NULL, 'frutas',        'both'),
+  (102, 'Pimiento rojo',          12.00, 65.00, NULL, 'verduras',      'both'),
+  (103, 'Pimiento verde',         10.00, 55.00, NULL, 'verduras',      'both'),
+  (104, 'Pimiento naranja',       12.00, 65.00, NULL, 'verduras',      'both'),
+  (105, 'Pimiento amarillo',      12.00, 65.00, NULL, 'verduras',      'both')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   price_piece = EXCLUDED.price_piece,
@@ -122,4 +128,4 @@ ON CONFLICT (id) DO UPDATE SET
 SELECT setval('products_id_seq', (SELECT MAX(id) FROM products));
 
 -- Remove old products that are no longer in the catalog
-DELETE FROM products WHERE id > 99;
+DELETE FROM products WHERE id > 105;
