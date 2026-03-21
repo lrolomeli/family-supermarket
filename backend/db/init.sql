@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS products (
   price_kg NUMERIC(10,2) DEFAULT 0,
   image VARCHAR(255),
   category VARCHAR(100) DEFAULT 'general',
-  sell_by VARCHAR(20) DEFAULT 'both'
+  sell_by VARCHAR(20) DEFAULT 'both',
+  available BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS categories (

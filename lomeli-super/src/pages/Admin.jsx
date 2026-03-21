@@ -47,7 +47,7 @@ const TAB_DISPLAY_NAMES = {
 
 const TABS = ["Dashboard", "Orders", "ShoppingList", "Users", "Prices", "Categories", "Requests", "Invitations"];
 
-const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
+const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct, onToggleAvailable }) => {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [csvStatus, setCsvStatus] = useState(null);
@@ -268,13 +268,14 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / pieza</th>
               <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / kg</th>
               <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Categoría</th>
+              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Disponible</th>
               <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((product, i) => (
               <tr key={product.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                <td style={{ padding: "10px 16px", fontWeight: 500, color: "#374151" }}>{product.name}</td>
+                <td style={{ padding: "10px 16px", fontWeight: 500, color: product.available !== false ? "#374151" : "#9ca3af" }}>{product.name}</td>
                 <td style={{ padding: "10px 16px", textAlign: "right" }}>
                   <input type="number" min="0" step="0.5"
                     value={editingPrices[product.id]?.price_piece ?? product.price_piece}
@@ -296,6 +297,19 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                   }}>
                     {product.category || 'general'}
                   </span>
+                </td>
+                <td style={{ padding: "10px 16px", textAlign: "center" }}>
+                  <button
+                    onClick={() => onToggleAvailable(product.id, !product.available)}
+                    style={{
+                      padding: "4px 14px", border: "none", borderRadius: "6px", cursor: "pointer",
+                      fontSize: "13px", fontWeight: 500,
+                      background: product.available !== false ? "#dcfce7" : "#fee2e2",
+                      color: product.available !== false ? "#15803d" : "#ef4444",
+                    }}
+                  >
+                    {product.available !== false ? "Sí" : "No"}
+                  </button>
                 </td>
                 <td style={{ padding: "10px 16px", textAlign: "center" }}>
                   <button onClick={() => handleEditProduct(product)} style={{
@@ -806,7 +820,7 @@ const Admin = () => {
     fetchCategories();
     fetchRequests();
     fetchInvitations();
-    fetch(`${API_BASE_URL}/products`)
+    fetch(`${API_BASE_URL}/products?all=true`)
       .then(r => r.json())
       .then(data => {
         setCatalog(data);
@@ -886,7 +900,7 @@ const Admin = () => {
       method: "PUT",
       body: JSON.stringify(editingPrices[id]),
     });
-    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
     setCatalog(updated);
   };
 
@@ -898,7 +912,7 @@ const Admin = () => {
       method: "POST",
       body: JSON.stringify({ products }),
     });
-    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
     setCatalog(updated);
   };
 
@@ -913,7 +927,7 @@ const Admin = () => {
       body: formData,
     });
     const result = await res.json();
-    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
     setCatalog(updated);
     const initial = {};
     updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
@@ -941,7 +955,7 @@ const Admin = () => {
     });
 
     if (res.ok) {
-      const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+      const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
       setCatalog(updated);
       const initial = {};
       updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
@@ -955,11 +969,19 @@ const Admin = () => {
     await apiFetch(`${API_BASE_URL}/admin/products/${productId}`, {
       method: "DELETE",
     });
-    const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
     setCatalog(updated);
     const initial = {};
     updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
     setEditingPrices(initial);
+  };
+
+  const handleToggleAvailable = async (productId, available) => {
+    await apiFetch(`${API_BASE_URL}/admin/products/${productId}/available`, {
+      method: "PUT",
+      body: JSON.stringify({ available }),
+    });
+    setCatalog(prev => prev.map(p => p.id === productId ? { ...p, available } : p));
   };
 
   const handleUpdateProduct = async (productId, productData, imageFile) => {
@@ -979,7 +1001,7 @@ const Admin = () => {
     });
 
     if (res.ok) {
-      const updated = await fetch(`${API_BASE_URL}/products`).then(r => r.json());
+      const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
       setCatalog(updated);
       const initial = {};
       updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
@@ -1326,6 +1348,7 @@ const Admin = () => {
           onCsvUpload={handleCsvUpload}
           onAddProduct={handleAddProduct}
           onDeleteProduct={handleDeleteProduct}
+          onToggleAvailable={handleToggleAvailable}
           categories={categories}
           onUpdateProduct={handleUpdateProduct}
         />

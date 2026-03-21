@@ -16,6 +16,7 @@ const runSetup = async (pool) => {
       "add-proposed-changes-migration.sql",
       "add-invitations-migration.sql",
       "add-sell-by-migration.sql",
+      "add-available-migration.sql",
     ];
     for (const file of migrations) {
       const filePath = path.join(__dirname, file);

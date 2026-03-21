@@ -349,7 +349,11 @@ server.patch("/admin/users/:uid/approve", authenticate, async (req, res) => {
 
 server.get("/products", async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM products ORDER BY id");
+    const showAll = req.query.all === "true";
+    const query = showAll
+      ? "SELECT * FROM products ORDER BY name"
+      : "SELECT * FROM products WHERE available = true ORDER BY name";
+    const { rows } = await pool.query(query);
     res.status(200).json(rows);
   } catch (error) {
     res.status(500).send(error.message);
@@ -368,6 +372,24 @@ server.put("/admin/products/:id", authenticate, async (req, res) => {
       [price_piece, price_kg, req.params.id]
     );
     res.status(200).send("Price updated");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// PUT /admin/products/:id/available - toggle disponibilidad
+server.put("/admin/products/:id/available", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { available } = req.body;
+    const { rows } = await pool.query(
+      "UPDATE products SET available = $1 WHERE id = $2 RETURNING *",
+      [available, req.params.id]
+    );
+    if (!rows.length) return res.status(404).send("Product not found");
+    res.status(200).json(rows[0]);
   } catch (error) {
     res.status(500).send(error.message);
   }
