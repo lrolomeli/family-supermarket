@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS products (
   price_piece NUMERIC(10,2) DEFAULT 0,
   price_kg NUMERIC(10,2) DEFAULT 0,
   image VARCHAR(255),
-  category VARCHAR(100) DEFAULT 'general'
+  category VARCHAR(100) DEFAULT 'general',
+  sell_by VARCHAR(20) DEFAULT 'both'
 );
 
 CREATE TABLE IF NOT EXISTS categories (
