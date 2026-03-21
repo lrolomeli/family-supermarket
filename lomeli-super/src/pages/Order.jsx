@@ -8,6 +8,14 @@ const ProductCarousel = ({ products }) => {
   const perPage = 5;
   const totalPages = Math.ceil(products.length / perPage);
 
+  useEffect(() => {
+    if (totalPages <= 1) return;
+    const timer = setInterval(() => {
+      setPage(p => (p + 1) % totalPages);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [totalPages]);
+
   if (products.length === 0) return null;
 
   const visible = products.slice(page * perPage, page * perPage + perPage);
