@@ -93,6 +93,7 @@ const normalize = (str) =>
 
 const Order = () => {
   const [products, setProducts] = useState([]);
+  const [unavailable, setUnavailable] = useState([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -108,6 +109,10 @@ const Order = () => {
       .then(r => r.json())
       .then(setProducts)
       .catch(e => console.error("Error loading products:", e));
+    apiFetch(`${API_BASE_URL}/products?all=true`)
+      .then(r => r.json())
+      .then(all => setUnavailable(all.filter(p => p.available === false)))
+      .catch(e => console.error("Error loading unavailable:", e));
   }, []);
 
   // Close dropdown when clicking outside
@@ -247,6 +252,21 @@ const Order = () => {
           </div>
         )}
       </div>
+
+      {/* Unavailable products info */}
+      {unavailable.length > 0 && (
+        <div style={{
+          marginTop: "16px", padding: "12px 16px",
+          background: "#fef3c7", border: "1px solid #fde68a", borderRadius: "10px",
+        }}>
+          <p style={{ margin: "0 0 6px", fontSize: "13px", fontWeight: 600, color: "#92400e" }}>
+            ⚠️ Productos no disponibles por el momento:
+          </p>
+          <p style={{ margin: 0, fontSize: "13px", color: "#78350f", lineHeight: 1.6 }}>
+            {unavailable.map(p => p.name).join(", ")}
+          </p>
+        </div>
+      )}
 
       {/* Cart items preview */}
       {cart.length > 0 && (
