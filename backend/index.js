@@ -424,7 +424,7 @@ server.post("/admin/products", authenticate, upload.single("image"), async (req,
     const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
     if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
 
-    const { name, price_piece, price_kg, category } = req.body;
+    const { name, price_piece, price_kg, category, sell_by } = req.body;
     let imagePath = null;
     
     // Process image if uploaded
@@ -433,8 +433,8 @@ server.post("/admin/products", authenticate, upload.single("image"), async (req,
     }
     
     const { rows } = await pool.query(
-      "INSERT INTO products (name, price_piece, price_kg, image, category) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [name, parseFloat(price_piece) || 0, parseFloat(price_kg) || 0, imagePath, category || 'general']
+      "INSERT INTO products (name, price_piece, price_kg, image, category, sell_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [name, parseFloat(price_piece) || 0, parseFloat(price_kg) || 0, imagePath, category || 'general', sell_by || 'both']
     );
     
     res.status(201).json(rows[0]);

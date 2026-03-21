@@ -57,7 +57,8 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
     name: "",
     price_piece: "",
     price_kg: "",
-    category: categories[0]?.name || "general"
+    category: categories[0]?.name || "general",
+    sell_by: "both"
   });
   const [imageFile, setImageFile] = useState(null);
   const [editImageFile, setEditImageFile] = useState(null);
@@ -90,7 +91,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
     
     try {
       await onAddProduct(newProduct, imageFile);
-      setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general" });
+      setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general", sell_by: "both" });
       setImageFile(null);
       setShowAddForm(false);
     } catch (error) {
@@ -216,6 +217,15 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
                 <option key={cat.id} value={cat.name}>{cat.name}</option>
               ))}
             </select>
+            <select
+              value={newProduct.sell_by}
+              onChange={e => setNewProduct({...newProduct, sell_by: e.target.value})}
+              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
+            >
+              <option value="both">Pieza y Kilo</option>
+              <option value="pieces">Solo Pieza</option>
+              <option value="kg">Solo Kilo</option>
+            </select>
           </div>
           <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
@@ -237,7 +247,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
             </button>
             <button onClick={() => {
               setShowAddForm(false);
-              setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general" });
+              setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general", sell_by: "both" });
               setImageFile(null);
             }} style={{
               padding: "8px 20px", background: "#f3f4f6", color: "#374151",
@@ -916,6 +926,7 @@ const Admin = () => {
     formData.append("price_piece", productData.price_piece);
     formData.append("price_kg", productData.price_kg);
     formData.append("category", productData.category);
+    formData.append("sell_by", productData.sell_by || "both");
     if (imageFile) {
       formData.append("image", imageFile);
     }
