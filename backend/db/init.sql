@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS orders (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_orders_uid ON orders(uid);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+
 CREATE TABLE IF NOT EXISTS order_favorites (
   id SERIAL PRIMARY KEY,
   uid VARCHAR(255) NOT NULL REFERENCES users(uid) ON DELETE CASCADE,

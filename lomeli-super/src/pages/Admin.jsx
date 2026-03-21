@@ -805,6 +805,19 @@ const Admin = () => {
     }
   };
 
+  const refreshCatalog = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/products?all=true`);
+      const data = await res.json();
+      setCatalog(data);
+      const initial = {};
+      data.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
+      setEditingPrices(initial);
+    } catch (error) {
+      console.error("Error fetching catalog:", error);
+    }
+  };
+
   const handleCreateInvitation = async () => {
     try {
       await apiFetch(`${API_BASE_URL}/admin/invitations`, { method: "POST" });
@@ -820,15 +833,7 @@ const Admin = () => {
     fetchCategories();
     fetchRequests();
     fetchInvitations();
-    fetch(`${API_BASE_URL}/products?all=true`)
-      .then(r => r.json())
-      .then(data => {
-        setCatalog(data);
-        const initial = {};
-        data.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
-        setEditingPrices(initial);
-      })
-      .catch(console.error);
+    refreshCatalog();
 
     // Poll for new orders and requests every 3 minutes
     const interval = setInterval(() => {
@@ -900,8 +905,7 @@ const Admin = () => {
       method: "PUT",
       body: JSON.stringify(editingPrices[id]),
     });
-    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
-    setCatalog(updated);
+    await refreshCatalog();
   };
 
   const handleSaveAll = async () => {
@@ -912,8 +916,7 @@ const Admin = () => {
       method: "POST",
       body: JSON.stringify({ products }),
     });
-    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
-    setCatalog(updated);
+    await refreshCatalog();
   };
 
   const handleCsvUpload = async (file) => {
@@ -927,11 +930,7 @@ const Admin = () => {
       body: formData,
     });
     const result = await res.json();
-    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
-    setCatalog(updated);
-    const initial = {};
-    updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
-    setEditingPrices(initial);
+    await refreshCatalog();
     alert(`✅ ${result.updated} productos actualizados`);
   };
 
@@ -955,11 +954,7 @@ const Admin = () => {
     });
 
     if (res.ok) {
-      const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
-      setCatalog(updated);
-      const initial = {};
-      updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
-      setEditingPrices(initial);
+      await refreshCatalog();
     } else {
       throw new Error("Failed to add product");
     }
@@ -969,11 +964,7 @@ const Admin = () => {
     await apiFetch(`${API_BASE_URL}/admin/products/${productId}`, {
       method: "DELETE",
     });
-    const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
-    setCatalog(updated);
-    const initial = {};
-    updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
-    setEditingPrices(initial);
+    await refreshCatalog();
   };
 
   const handleToggleAvailable = async (productId, available) => {
@@ -1001,11 +992,7 @@ const Admin = () => {
     });
 
     if (res.ok) {
-      const updated = await fetch(`${API_BASE_URL}/products?all=true`).then(r => r.json());
-      setCatalog(updated);
-      const initial = {};
-      updated.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
-      setEditingPrices(initial);
+      await refreshCatalog();
     } else {
       throw new Error("Failed to update product");
     }

@@ -99,20 +99,18 @@ const Order = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [note, setNote] = useState("");
   const [focused, setFocused] = useState(false);
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    apiFetch(`${API_BASE_URL}/products`)
-      .then(r => r.json())
-      .then(setProducts)
-      .catch(e => console.error("Error loading products:", e));
     apiFetch(`${API_BASE_URL}/products?all=true`)
       .then(r => r.json())
-      .then(all => setUnavailable(all.filter(p => p.available === false)))
-      .catch(e => console.error("Error loading unavailable:", e));
+      .then(all => {
+        setProducts(all.filter(p => p.available !== false));
+        setUnavailable(all.filter(p => p.available === false));
+      })
+      .catch(e => console.error("Error loading products:", e));
   }, []);
 
   // Close dropdown when clicking outside
@@ -164,11 +162,10 @@ const Order = () => {
       }));
       const res = await apiFetch(`${API_BASE_URL}/orders`, {
         method: "POST",
-        body: JSON.stringify({ products, note }),
+        body: JSON.stringify({ products }),
       });
       if (!res.ok) throw new Error("Error al enviar orden");
       setCart([]);
-      setNote("");
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
     } catch (e) {
@@ -296,23 +293,6 @@ const Order = () => {
               }}>✕</button>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Note */}
-      {cart.length > 0 && (
-        <div style={{ marginTop: "16px" }}>
-          <textarea
-            placeholder="Nota para tu pedido (opcional)"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            rows={2}
-            style={{
-              width: "100%", padding: "12px", fontSize: "14px",
-              border: "1px solid #d1d5db", borderRadius: "10px",
-              resize: "none", boxSizing: "border-box", outline: "none",
-            }}
-          />
         </div>
       )}
 

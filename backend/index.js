@@ -603,7 +603,6 @@ server.patch("/admin/orders/:id/status", authenticate, async (req, res) => {
 
 server.get("/orders", authenticate, async (req, res) => {
   try {
-    await syncUser(req.user.uid, req.user.email);
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { rows } = await pool.query(
       "SELECT * FROM orders WHERE uid = $1 AND is_delivered = false ORDER BY created_at DESC",
@@ -619,7 +618,6 @@ server.get("/orders", authenticate, async (req, res) => {
 // POST /orders - crear orden
 server.post("/orders", authenticate, async (req, res) => {
   try {
-    await syncUser(req.user.uid, req.user.email);
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
     const { products } = req.body;
     
