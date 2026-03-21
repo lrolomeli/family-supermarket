@@ -35,7 +35,6 @@ INSERT INTO products (id, name, price_piece, price_kg, image, category, sell_by)
   (22, 'Champinones a granel',      0, 90.00, NULL, 'hongos',        'kg'),
   (23, 'Champipack (caja)',        30.00,  0, NULL, 'hongos',        'pieces'),
   (24, 'Chayote',                   5.00, 14.00, NULL, 'verduras', 'both'),
-  (25, 'Chile morron',             12.00, 65.00, NULL, 'verduras',      'both'),
   (26, 'Chile mirasol',            5.00, 120.00, NULL, 'verduras',     'both'),
   (27, 'Chile de arbol',           3.00, 150.00, NULL, 'verduras',     'both'),
   (28, 'Chile jalapeno',            3.00, 30.00, NULL, 'verduras',      'both'),
@@ -129,3 +128,4 @@ SELECT setval('products_id_seq', (SELECT MAX(id) FROM products));
 
 -- Remove old products that are no longer in the catalog
 DELETE FROM products WHERE id > 105;
+DELETE FROM products WHERE id = 25;
