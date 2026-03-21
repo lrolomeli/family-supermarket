@@ -36,7 +36,8 @@ const StatCard = ({ label, value, color = "#3b82f6" }) => (
 
 const TAB_DISPLAY_NAMES = {
   "Dashboard": "Panel",
-  "Orders": "Órdenes", 
+  "Orders": "Órdenes",
+  "ShoppingList": "Lista de Compras",
   "Users": "Usuarios",
   "Prices": "Productos",
   "Categories": "Categorías",
@@ -44,7 +45,7 @@ const TAB_DISPLAY_NAMES = {
   "Invitations": "Invitaciones"
 };
 
-const TABS = ["Dashboard", "Orders", "Users", "Prices", "Categories", "Requests", "Invitations"];
+const TABS = ["Dashboard", "Orders", "ShoppingList", "Users", "Prices", "Categories", "Requests", "Invitations"];
 
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct }) => {
   const [search, setSearch] = useState("");
@@ -637,6 +638,90 @@ const RequestsTab = ({ requests, onRequestResponse }) => {
   );
 };
 
+const ShoppingListTab = ({ orders, catalog }) => {
+  // Consolidate products from pending and in_progress orders
+  const activeOrders = orders.filter(o => o.status === "pending" || o.status === "in_progress");
+
+  const consolidated = useMemo(() => {
+    const map = {};
+    activeOrders.forEach(order => {
+      const products = typeof order.products === "string" ? JSON.parse(order.products) : order.products;
+      products.forEach(item => {
+        const key = `${item.name}-${item.unit}`;
+        if (!map[key]) {
+          map[key] = { name: item.name, unit: item.unit, quantity: 0, id: item.id };
+        }
+        map[key].quantity += item.quantity;
+      });
+    });
+    return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeOrders]);
+
+  const [checked, setChecked] = useState({});
+
+  const toggleCheck = (key) => {
+    setChecked(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const getProductImage = (item) => {
+    const found = catalog.find(p => p.id === item.id || p.name === item.name);
+    return found?.image || "/assets/default-product.svg";
+  };
+
+  if (activeOrders.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "40px 20px", color: "#6b7280" }}>
+        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🛒</div>
+        <p>No hay órdenes pendientes o en progreso.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
+        Lista consolidada de {activeOrders.length} {activeOrders.length === 1 ? "orden" : "órdenes"} activas ({consolidated.length} productos).
+      </p>
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+        {consolidated.map((item) => {
+          const key = `${item.name}-${item.unit}`;
+          const isDone = checked[key];
+          return (
+            <div key={key} onClick={() => toggleCheck(key)} style={{
+              display: "flex", alignItems: "center", gap: "12px",
+              padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
+              cursor: "pointer", opacity: isDone ? 0.4 : 1,
+              textDecoration: isDone ? "line-through" : "none",
+              transition: "opacity 0.2s",
+            }}>
+              <div style={{
+                width: "24px", height: "24px", borderRadius: "6px",
+                border: isDone ? "none" : "2px solid #d1d5db",
+                background: isDone ? "#15803d" : "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                {isDone && <span style={{ color: "#fff", fontSize: "14px" }}>✓</span>}
+              </div>
+              <img src={getProductImage(item)} alt={item.name}
+                style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: "15px", fontWeight: 600, color: "#374151" }}>
+                {item.name}
+              </span>
+              <span style={{
+                fontSize: "15px", fontWeight: 700, color: "#15803d",
+                background: "#f0fdf4", padding: "4px 12px", borderRadius: "8px",
+              }}>
+                {item.quantity} {item.unit === "kg" ? "kg" : "pzs"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
@@ -1162,6 +1247,10 @@ const Admin = () => {
             ))
           )}
         </div>
+      )}
+      {/* SHOPPING LIST TAB */}
+      {tab === "ShoppingList" && (
+        <ShoppingListTab orders={orders} catalog={catalog} />
       )}
       {/* USERS TAB */}
       {tab === "Users" && (
