@@ -905,7 +905,8 @@ const Admin = () => {
   const handleCsvUpload = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    const token = await auth.currentUser.getIdToken();
+    const token = localStorage.getItem("local_token") || (auth.currentUser && await auth.currentUser.getIdToken());
+    if (!token) throw new Error("Not authenticated");
     const res = await fetch(`${API_BASE_URL}/admin/products/csv`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
@@ -931,7 +932,8 @@ const Admin = () => {
       formData.append("image", imageFile);
     }
 
-    const token = await auth.currentUser.getIdToken();
+    const token = localStorage.getItem("local_token") || (auth.currentUser && await auth.currentUser.getIdToken());
+    if (!token) throw new Error("Not authenticated");
     const res = await fetch(`${API_BASE_URL}/admin/products`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
@@ -968,7 +970,8 @@ const Admin = () => {
       formData.append("image", imageFile);
     }
 
-    const token = await auth.currentUser.getIdToken();
+    const token = localStorage.getItem("local_token") || (auth.currentUser && await auth.currentUser.getIdToken());
+    if (!token) throw new Error("Not authenticated");
     const res = await fetch(`${API_BASE_URL}/admin/products/${productId}/details`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
