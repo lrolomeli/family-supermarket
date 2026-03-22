@@ -117,6 +117,7 @@ const Order = () => {
   const [submitted, setSubmitted] = useState(false);
   const [focused, setFocused] = useState(false);
   const [showUnavailable, setShowUnavailable] = useState(false);
+  const [viewMode, setViewMode] = useState("search"); // "search" | "list"
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -146,6 +147,8 @@ const Order = () => {
   const filtered = search.trim()
     ? products.filter(p => normalize(p.name).includes(normalize(search)))
     : [];
+
+  const sortedProducts = [...products].sort((a, b) => a.name.localeCompare(b.name, "es"));
 
   const handleAddToCart = (product, quantity, unit) => {
     setCart(prev => {
@@ -219,8 +222,32 @@ const Order = () => {
         </p>
       </div>
 
-      {/* Search */}
-      <div style={{ position: "relative", marginBottom: "12px" }}>
+      {/* View mode toggle */}
+      <div style={{
+        display: "flex", gap: "6px", marginBottom: "12px",
+        background: "#f3f4f6", borderRadius: "12px", padding: "4px",
+      }}>
+        {[
+          { key: "search", label: "🔍 Buscar" },
+          { key: "list", label: "📋 Lista" },
+        ].map(m => (
+          <button key={m.key} onClick={() => setViewMode(m.key)} style={{
+            flex: 1, padding: "10px 0", border: "none", borderRadius: "10px",
+            fontSize: "14px", fontWeight: 600, cursor: "pointer",
+            background: viewMode === m.key ? "#fff" : "transparent",
+            color: viewMode === m.key ? "#111827" : "#9ca3af",
+            boxShadow: viewMode === m.key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+            WebkitTapHighlightColor: "transparent",
+            transition: "all .15s",
+          }}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search mode */}
+      {viewMode === "search" && (
+        <div style={{ position: "relative", marginBottom: "12px" }}>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "#9ca3af", pointerEvents: "none" }}>🔍</span>
           <input
@@ -289,6 +316,45 @@ const Order = () => {
           </div>
         )}
       </div>
+      )}
+
+      {/* List mode */}
+      {viewMode === "list" && (
+        <div style={{
+          display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px",
+        }}>
+          {sortedProducts.map(p => {
+            const inCart = cart.some(i => i.product.id === p.id);
+            return (
+              <div key={p.id} onClick={() => setSelectedProduct(p)} style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: "10px 12px", background: inCart ? "#f0fdf4" : "#fff",
+                border: inCart ? "1.5px solid #bbf7d0" : "1px solid #e5e7eb",
+                borderRadius: "12px", cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}>
+                <img src={imgSrc(p.image)} alt={p.name}
+                  style={{ width: "40px", height: "40px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "14px", color: "#111827", fontWeight: 500 }}>{p.name}</div>
+                  <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                    {p.price_piece > 0 && `$${Number(p.price_piece).toFixed(0)}/pz`}
+                    {p.price_piece > 0 && p.price_kg > 0 && " · "}
+                    {p.price_kg > 0 && `$${Number(p.price_kg).toFixed(0)}/kg`}
+                  </div>
+                </div>
+                {inCart ? (
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "3px 8px", borderRadius: "6px" }}>
+                    En carrito
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "20px", color: "#15803d" }}>+</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Unavailable products (collapsible) */}
       {unavailable.length > 0 && (
@@ -362,7 +428,7 @@ const Order = () => {
       )}
 
       {/* Empty state */}
-      {cart.length === 0 && !search && (
+      {cart.length === 0 && !search && viewMode === "search" && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#d1d5db" }}>
           <div style={{ fontSize: "48px", marginBottom: "8px" }}>🛒</div>
           <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>
