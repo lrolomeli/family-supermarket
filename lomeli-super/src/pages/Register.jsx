@@ -4,6 +4,12 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
 import API_BASE_URL from "../config";
 
+const inputStyle = {
+  padding: "14px", borderRadius: "12px", border: "1.5px solid #e5e7eb",
+  fontSize: "16px", width: "100%", boxSizing: "border-box",
+  WebkitAppearance: "none", background: "#f9fafb",
+};
+
 const Register = () => {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -11,8 +17,8 @@ const Register = () => {
   const [valid, setValid] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", confirmPassword: "", display_name: "" });
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [form, setForm] = useState({ email: "", password: "", confirmPassword: "", display_name: "" });
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/invitations/${code}/validate`)
@@ -31,81 +37,72 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (form.password !== form.confirmPassword) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
-    if (form.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres");
-      return;
-    }
-
+    if (form.password !== form.confirmPassword) { setError("Las contraseñas no coinciden"); return; }
+    if (form.password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, email: form.email, password: form.password, display_name: form.display_name }),
       });
-
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem("local_token", data.token);
         localStorage.setItem("local_user", JSON.stringify({ uid: data.uid, email: data.email, display_name: data.display_name }));
-        navigate("/order");
-        window.location.reload();
-      } else {
-        const errText = await res.text();
-        setError(errText || "Error al registrarse");
-      }
-    } catch (err) {
-      setError("Error de conexión");
-    } finally {
-      setLoading(false);
-    }
+        navigate("/order"); window.location.reload();
+      } else { setError((await res.text()) || "Error al registrarse"); }
+    } catch { setError("Error de conexión"); }
+    finally { setLoading(false); }
   };
 
   const handleGoogleRegister = async () => {
-    setError("");
-    setGoogleLoading(true);
+    setError(""); setGoogleLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`${API_BASE_URL}/auth/register-google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ code }),
       });
-      if (res.ok) {
-        navigate("/order");
-      } else {
-        const errText = await res.text();
-        setError(errText || "Error al registrarse con Google");
-        await auth.signOut();
-      }
+      if (res.ok) { navigate("/order"); }
+      else { setError((await res.text()) || "Error al registrarse con Google"); await auth.signOut(); }
     } catch (err) {
       console.error("Google register error:", err);
       setError("Error al registrarse con Google");
       try { await auth.signOut(); } catch (_) {}
-    } finally {
-      setGoogleLoading(false);
-    }
+    } finally { setGoogleLoading(false); }
+  };
+
+  const focusHandler = (e) => { e.target.style.borderColor = "#15803d"; };
+  const blurHandler = (e) => { e.target.style.borderColor = "#e5e7eb"; };
+
+  const wrapStyle = {
+    minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+    background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", padding: "20px",
+  };
+  const cardStyle = {
+    background: "#fff", borderRadius: "20px", padding: "40px 24px",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.10)", maxWidth: "380px", width: "100%",
+    boxSizing: "border-box", textAlign: "center",
   };
 
   if (validating) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)" }}>
-      <p style={{ color: "#6b7280" }}>Validando invitación...</p>
+    <div style={wrapStyle}>
+      <p style={{ color: "#6b7280", fontSize: "14px" }}>Validando invitación...</p>
     </div>
   );
 
   if (!valid) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)" }}>
-      <div style={{ background: "#fff", borderRadius: "20px", padding: "48px 40px", boxShadow: "0 8px 32px rgba(0,0,0,0.10)", maxWidth: "380px", width: "100%", textAlign: "center" }}>
-        <div style={{ fontSize: "48px", marginBottom: "16px" }}>❌</div>
-        <h2 style={{ margin: "0 0 12px", color: "#ef4444", fontWeight: 800 }}>Invitación Inválida</h2>
-        <p style={{ color: "#6b7280", fontSize: "14px" }}>{error}</p>
-        <button onClick={() => navigate("/login")} style={{ marginTop: "20px", padding: "10px 24px", background: "#15803d", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600 }}>
+    <div style={wrapStyle}>
+      <div style={cardStyle}>
+        <div style={{ fontSize: "48px", marginBottom: "12px" }}>❌</div>
+        <h2 style={{ margin: "0 0 8px", color: "#ef4444", fontWeight: 800, fontSize: "20px" }}>Invitación Inválida</h2>
+        <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "20px" }}>{error}</p>
+        <button onClick={() => navigate("/login")} style={{
+          padding: "12px 24px", background: "#15803d", color: "#fff",
+          border: "none", borderRadius: "12px", cursor: "pointer", fontWeight: 700, fontSize: "15px",
+          WebkitTapHighlightColor: "transparent",
+        }}>
           Ir al Login
         </button>
       </div>
@@ -113,20 +110,31 @@ const Register = () => {
   );
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)" }}>
-      <div style={{ background: "#fff", borderRadius: "20px", padding: "48px 40px", boxShadow: "0 8px 32px rgba(0,0,0,0.10)", maxWidth: "400px", width: "100%" }}>
-        <div style={{ display: "flex", gap: "8px", fontSize: "40px", justifyContent: "center" }}>🥦🥕🍓</div>
-        <h1 style={{ margin: "12px 0 4px", fontSize: "28px", fontWeight: 800, color: "#15803d", textAlign: "center" }}>Lomeli Super</h1>
-        <p style={{ margin: "0 0 24px", color: "#6b7280", fontSize: "14px", textAlign: "center" }}>Crea tu cuenta con invitación</p>
+    <div style={wrapStyle}>
+      <div style={{ ...cardStyle, textAlign: "left" }}>
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <div style={{ fontSize: "44px", lineHeight: 1 }}>🥦</div>
+          <h1 style={{ margin: "8px 0 4px", fontSize: "24px", fontWeight: 800, color: "#15803d" }}>Crear Cuenta</h1>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>Registro con invitación</p>
+        </div>
 
-        {error && <div style={{ marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", background: "#fef2f2", color: "#dc2626", fontSize: "13px" }}>⚠️ {error}</div>}
+        {error && (
+          <div style={{
+            marginBottom: "14px", padding: "10px 14px", borderRadius: "12px",
+            background: "#fef2f2", color: "#dc2626", fontSize: "13px",
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
 
+        {/* Google register */}
         <button onClick={handleGoogleRegister} disabled={googleLoading} style={{
-          display: "flex", alignItems: "center", gap: "12px", padding: "12px 24px",
+          display: "flex", alignItems: "center", gap: "12px", padding: "14px 20px",
           background: googleLoading ? "#f3f4f6" : "#fff", border: "1.5px solid #e5e7eb",
-          borderRadius: "10px", cursor: googleLoading ? "not-allowed" : "pointer",
+          borderRadius: "12px", cursor: googleLoading ? "not-allowed" : "pointer",
           fontSize: "15px", fontWeight: 600, color: "#374151", width: "100%",
-          justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: "8px",
+          justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          WebkitTapHighlightColor: "transparent", boxSizing: "border-box", marginBottom: "12px",
         }}>
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
@@ -137,24 +145,30 @@ const Register = () => {
           {googleLoading ? "Registrando..." : "Registrarse con Google"}
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "4px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "4px 0 14px" }}>
           <hr style={{ flex: 1, border: "none", borderTop: "1px solid #e5e7eb" }} />
-          <span style={{ color: "#9ca3af", fontSize: "13px" }}>o con email</span>
+          <span style={{ color: "#9ca3af", fontSize: "12px" }}>o con email</span>
           <hr style={{ flex: 1, border: "none", borderTop: "1px solid #e5e7eb" }} />
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <input type="text" placeholder="Nombre (opcional)" value={form.display_name} onChange={e => setForm({ ...form, display_name: e.target.value })}
-            style={{ padding: "12px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "15px" }} />
-          <input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-            style={{ padding: "12px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "15px" }} />
-          <input type="password" placeholder="Contraseña" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-            style={{ padding: "12px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "15px" }} />
-          <input type="password" placeholder="Confirmar contraseña" required value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-            style={{ padding: "12px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "15px" }} />
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <input type="text" placeholder="Nombre (opcional)" value={form.display_name}
+            onChange={e => setForm({ ...form, display_name: e.target.value })}
+            onFocus={focusHandler} onBlur={blurHandler} style={inputStyle} />
+          <input type="email" placeholder="Email" required value={form.email}
+            onChange={e => setForm({ ...form, email: e.target.value })}
+            onFocus={focusHandler} onBlur={blurHandler} style={inputStyle} />
+          <input type="password" placeholder="Contraseña" required value={form.password}
+            onChange={e => setForm({ ...form, password: e.target.value })}
+            onFocus={focusHandler} onBlur={blurHandler} style={inputStyle} />
+          <input type="password" placeholder="Confirmar contraseña" required value={form.confirmPassword}
+            onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+            onFocus={focusHandler} onBlur={blurHandler} style={inputStyle} />
           <button type="submit" disabled={loading} style={{
             padding: "14px", background: loading ? "#86efac" : "#15803d", color: "#fff",
-            border: "none", borderRadius: "10px", fontSize: "16px", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer"
+            border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700,
+            cursor: loading ? "not-allowed" : "pointer",
+            WebkitTapHighlightColor: "transparent", marginTop: "4px",
           }}>
             {loading ? "Registrando..." : "Crear cuenta"}
           </button>

@@ -19,7 +19,6 @@ const Login = () => {
     try {
       await signInWithPopup(auth, googleProvider);
       await primeToken();
-      // Check if user is registered in the DB
       const res = await fetch(`${API_BASE_URL}/me`, {
         headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` },
       });
@@ -33,8 +32,8 @@ const Login = () => {
         }
       }
       navigate("/order");
-    } catch (error) {
-      console.error("Google Sign-In error:", error);
+    } catch (err) {
+      console.error("Google Sign-In error:", err);
       setLoading(false);
     }
   };
@@ -70,24 +69,46 @@ const Login = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)" }}>
-      <div style={{ background: "#fff", borderRadius: "20px", padding: "48px 40px", boxShadow: "0 8px 32px rgba(0,0,0,0.10)", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", maxWidth: "360px", width: "100%" }}>
-        <div style={{ display: "flex", gap: "8px", fontSize: "40px" }}>🥦🥕🍓</div>
-        <h1 style={{ margin: 0, fontSize: "28px", fontWeight: 800, color: "#15803d", letterSpacing: "-0.5px" }}>Lomeli Super</h1>
-        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px", textAlign: "center" }}>Haz tu pedido de despensa fácil y rápido</p>
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+      padding: "20px",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: "20px",
+        padding: "40px 24px", boxShadow: "0 8px 32px rgba(0,0,0,0.10)",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
+        maxWidth: "360px", width: "100%", boxSizing: "border-box",
+      }}>
+        <div style={{ fontSize: "44px", lineHeight: 1 }}>🥦</div>
+        <h1 style={{ margin: 0, fontSize: "26px", fontWeight: 800, color: "#15803d", letterSpacing: "-0.5px" }}>
+          Lomeli Super
+        </h1>
+        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px", textAlign: "center" }}>
+          Haz tu pedido de despensa fácil y rápido
+        </p>
 
-        <hr style={{ width: "100%", border: "none", borderTop: "1px solid #f3f4f6", margin: "8px 0" }} />
+        <hr style={{ width: "100%", border: "none", borderTop: "1px solid #f3f4f6", margin: "4px 0" }} />
 
-        {error && <div style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", background: "#fef2f2", color: "#dc2626", fontSize: "13px" }}>⚠️ {error}</div>}
+        {error && (
+          <div style={{
+            width: "100%", padding: "10px 14px", borderRadius: "12px",
+            background: "#fef2f2", color: "#dc2626", fontSize: "13px",
+            boxSizing: "border-box",
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
 
         {!showLocal ? (
           <>
             <button onClick={handleGoogleSignIn} disabled={loading} style={{
-              display: "flex", alignItems: "center", gap: "12px", padding: "12px 24px",
+              display: "flex", alignItems: "center", gap: "12px", padding: "14px 20px",
               background: loading ? "#f3f4f6" : "#fff", border: "1.5px solid #e5e7eb",
-              borderRadius: "10px", cursor: loading ? "not-allowed" : "pointer",
+              borderRadius: "12px", cursor: loading ? "not-allowed" : "pointer",
               fontSize: "15px", fontWeight: 600, color: "#374151", width: "100%",
               justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              WebkitTapHighlightColor: "transparent", boxSizing: "border-box",
             }}>
               <svg width="20" height="20" viewBox="0 0 48 48">
                 <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
@@ -99,9 +120,10 @@ const Login = () => {
             </button>
 
             <button onClick={() => setShowLocal(true)} style={{
-              padding: "12px 24px", background: "#f9fafb", border: "1.5px solid #e5e7eb",
-              borderRadius: "10px", cursor: "pointer", fontSize: "15px", fontWeight: 600,
+              padding: "14px 20px", background: "#f9fafb", border: "1.5px solid #e5e7eb",
+              borderRadius: "12px", cursor: "pointer", fontSize: "15px", fontWeight: 600,
               color: "#374151", width: "100%", textAlign: "center",
+              WebkitTapHighlightColor: "transparent", boxSizing: "border-box",
             }}>
               Entrar con email y contraseña
             </button>
@@ -109,19 +131,35 @@ const Login = () => {
         ) : (
           <form onSubmit={handleLocalLogin} style={{ width: "100%", display: "flex", flexDirection: "column", gap: "12px" }}>
             <input type="email" placeholder="Email" required value={email} onChange={e => setEmail(e.target.value)}
-              style={{ padding: "12px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "15px", width: "100%", boxSizing: "border-box" }} />
+              style={{
+                padding: "14px", borderRadius: "12px", border: "1.5px solid #e5e7eb",
+                fontSize: "16px", width: "100%", boxSizing: "border-box",
+                WebkitAppearance: "none", background: "#f9fafb",
+              }}
+              onFocus={e => e.target.style.borderColor = "#15803d"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
             <input type="password" placeholder="Contraseña" required value={password} onChange={e => setPassword(e.target.value)}
-              style={{ padding: "12px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "15px", width: "100%", boxSizing: "border-box" }} />
+              style={{
+                padding: "14px", borderRadius: "12px", border: "1.5px solid #e5e7eb",
+                fontSize: "16px", width: "100%", boxSizing: "border-box",
+                WebkitAppearance: "none", background: "#f9fafb",
+              }}
+              onFocus={e => e.target.style.borderColor = "#15803d"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
             <button type="submit" disabled={loading} style={{
-              padding: "12px", background: loading ? "#86efac" : "#15803d", color: "#fff",
-              border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: 700,
+              padding: "14px", background: loading ? "#86efac" : "#15803d", color: "#fff",
+              border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700,
               cursor: loading ? "not-allowed" : "pointer",
+              WebkitTapHighlightColor: "transparent",
             }}>
               {loading ? "Entrando..." : "Iniciar sesión"}
             </button>
             <button type="button" onClick={() => { setShowLocal(false); setError(""); }} style={{
               padding: "10px", background: "none", border: "none", color: "#6b7280",
               cursor: "pointer", fontSize: "14px",
+              WebkitTapHighlightColor: "transparent",
             }}>
               ← Volver
             </button>

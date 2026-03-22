@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Home from "./pages/Home";
 import Login from "./components/Login";
 import Navbar from "./components/Navbar";
-import Pending from "./pages/Pending";
 import './App.css'
 import { useEffect, useState } from "react";
 import { auth } from "./firebase";
@@ -88,7 +87,7 @@ const App = () => {
 
   const PrivateRoute = ({ children }) => {
     if (!isLoggedIn) return <Navigate to="/login" replace />;
-    if (approved === false) return <Navigate to="/pending" replace />;
+    if (approved === false) return <Navigate to="/login" replace />;
     return (
       <>
         <Navbar user={user} isAdmin={isAdmin} />
@@ -111,11 +110,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={isLoggedIn ? <Navigate to="/order" replace /> : <Login />} />
         <Route path="/register/:code" element={isLoggedIn ? <Navigate to="/order" replace /> : <Register />} />
-        <Route path="/pending" element={
-          !isLoggedIn ? <Navigate to="/login" replace /> :
-          approved ? <Navigate to="/order" replace /> :
-          <Pending />
-        } />
+        <Route path="/pending" element={<Navigate to="/login" replace />} />
         <Route path="/order" element={<PrivateRoute><Order /></PrivateRoute>} />
         <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
         <Route path="/favorites" element={<PrivateRoute><FavoritesAndHistory /></PrivateRoute>} />
