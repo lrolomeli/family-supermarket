@@ -347,7 +347,7 @@ const ShoppingListTab = ({ orders, catalog }) => {
   const getProductImage = (item) => {
     const found = catalog.find(p => p.id === item.id || p.name === item.name);
     const img = found?.image;
-    return img ? `${API_BASE_URL}${img}` : "/assets/default-product.svg";
+    return img || "/assets/default-product.svg";
   };
 
   if (activeOrders.length === 0) {

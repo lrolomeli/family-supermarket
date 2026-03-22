@@ -267,7 +267,7 @@ const MyOrders = () => {
   const getProductImage = (name) => {
     const found = productCatalog.find(p => p.name === name);
     const img = found?.image;
-    return img ? `${API_BASE_URL}${img}` : '/assets/default-product.svg';
+    return img || '/assets/default-product.svg';
   };
 
   const formatDate = (dateStr) => {
