@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 
@@ -148,7 +148,8 @@ const Order = () => {
     ? products.filter(p => normalize(p.name).includes(normalize(search)))
     : [];
 
-  const sortedProducts = [...products].sort((a, b) => a.name.localeCompare(b.name, "es"));
+  const sortedProducts = useMemo(() => [...products].sort((a, b) => a.name.localeCompare(b.name, "es")), [products]);
+  const cartIdSet = useMemo(() => new Set(cart.map(i => i.product.id)), [cart]);
 
   const handleAddToCart = (product, quantity, unit) => {
     setCart(prev => {
@@ -324,7 +325,7 @@ const Order = () => {
           display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px",
         }}>
           {sortedProducts.map(p => {
-            const inCart = cart.some(i => i.product.id === p.id);
+            const inCart = cartIdSet.has(p.id);
             return (
               <div key={p.id} onClick={() => setSelectedProduct(p)} style={{
                 display: "flex", alignItems: "center", gap: "10px",

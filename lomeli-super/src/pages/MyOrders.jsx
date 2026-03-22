@@ -48,7 +48,7 @@ const MyOrders = () => {
   const [productCatalog, setProductCatalog] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/products`)
+    apiFetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => setProductCatalog(data))
       .catch(console.error);
