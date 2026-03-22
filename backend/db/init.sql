@@ -68,5 +68,7 @@ CREATE TABLE IF NOT EXISTS invitations (
   used_by VARCHAR(255),
   used_at TIMESTAMP,
   expires_at TIMESTAMP,
+  multi_use BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

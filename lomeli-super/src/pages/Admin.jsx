@@ -818,12 +818,24 @@ const Admin = () => {
     }
   };
 
-  const handleCreateInvitation = async () => {
+  const handleCreateInvitation = async (multiUse = false) => {
     try {
-      await apiFetch(`${API_BASE_URL}/admin/invitations`, { method: "POST" });
+      await apiFetch(`${API_BASE_URL}/admin/invitations`, {
+        method: "POST",
+        body: JSON.stringify({ multi_use: multiUse }),
+      });
       await fetchInvitations();
     } catch (error) {
       console.error("Error creating invitation:", error);
+    }
+  };
+
+  const handleDeactivateInvitation = async (id) => {
+    try {
+      await apiFetch(`${API_BASE_URL}/admin/invitations/${id}/deactivate`, { method: "PUT" });
+      await fetchInvitations();
+    } catch (error) {
+      console.error("Error deactivating invitation:", error);
     }
   };
 
@@ -1360,18 +1372,26 @@ const Admin = () => {
       {/* INVITATIONS TAB */}
       {tab === "Invitations" && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
             <h3 style={{ fontSize: "18px", color: "#374151", margin: 0 }}>Links de Invitación</h3>
-            <button onClick={handleCreateInvitation} style={{
-              padding: "8px 20px", background: "#8b5cf6", color: "#fff",
-              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-            }}>
-              Generar Invitación
-            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => handleCreateInvitation(false)} style={{
+                padding: "8px 16px", background: "#8b5cf6", color: "#fff",
+                border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "13px"
+              }}>
+                Invitación Individual
+              </button>
+              <button onClick={() => handleCreateInvitation(true)} style={{
+                padding: "8px 16px", background: "#15803d", color: "#fff",
+                border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "13px"
+              }}>
+                Invitación Multi-uso
+              </button>
+            </div>
           </div>
 
           <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
-            Comparte estos links para que nuevos usuarios se registren sin necesidad de cuenta de Google. Cada link es de un solo uso y expira en 7 días.
+            Las invitaciones individuales expiran en 7 días y son de un solo uso. Las multi-uso no expiran y permiten registros ilimitados hasta que las desactives.
           </p>
 
           {invitations.length === 0 ? (
@@ -1384,20 +1404,23 @@ const Admin = () => {
                 <thead>
                   <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
                     <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Link</th>
+                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Tipo</th>
                     <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Estado</th>
                     <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Creado</th>
-                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Usado por</th>
+                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invitations.map((inv, i) => {
-                    const isUsed = !!inv.used_by;
-                    const isExpired = !isUsed && new Date(inv.expires_at) < new Date();
+                    const isDeactivated = inv.is_active === false;
+                    const isUsed = !inv.multi_use && !!inv.used_by;
+                    const isExpired = !isDeactivated && !isUsed && inv.expires_at && new Date(inv.expires_at) < new Date();
+                    const isAvailable = !isDeactivated && !isUsed && !isExpired;
                     const link = `${window.location.origin}/register/${inv.code}`;
                     return (
                       <tr key={inv.id} style={{ borderBottom: i < invitations.length - 1 ? "1px solid #f3f4f6" : "none" }}>
                         <td style={{ padding: "12px 16px" }}>
-                          {!isUsed && !isExpired ? (
+                          {isAvailable ? (
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                               <input readOnly value={link} style={{
                                 flex: 1, padding: "6px 10px", borderRadius: "6px", border: "1px solid #d1d5db",
@@ -1415,19 +1438,37 @@ const Admin = () => {
                           )}
                         </td>
                         <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                          {isUsed ? (
+                          <span style={{
+                            padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600,
+                            background: inv.multi_use ? "#f0fdf4" : "#f3f4f6",
+                            color: inv.multi_use ? "#15803d" : "#6b7280",
+                          }}>
+                            {inv.multi_use ? "Multi-uso" : "Individual"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                          {isDeactivated ? (
+                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>Desactivado</span>
+                          ) : isUsed ? (
                             <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dcfce7", color: "#166534" }}>Usado</span>
                           ) : isExpired ? (
                             <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#fef2f2", color: "#dc2626" }}>Expirado</span>
                           ) : (
-                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dbeafe", color: "#1d4ed8" }}>Disponible</span>
+                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dbeafe", color: "#1d4ed8" }}>Activo</span>
                           )}
                         </td>
                         <td style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280", fontSize: "13px" }}>
                           {new Date(inv.created_at).toLocaleDateString()}
                         </td>
-                        <td style={{ padding: "12px 16px", textAlign: "center", color: "#374151", fontSize: "13px" }}>
-                          {inv.used_by_email || "—"}
+                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                          {isAvailable && (
+                            <button onClick={() => handleDeactivateInvitation(inv.id)} style={{
+                              padding: "4px 12px", background: "#fee2e2", color: "#ef4444",
+                              border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px"
+                            }}>
+                              Desactivar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

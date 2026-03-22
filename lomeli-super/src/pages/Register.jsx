@@ -17,7 +17,7 @@ const Register = () => {
       .then(data => {
         setValid(data.valid);
         if (!data.valid) {
-          const reasons = { not_found: "Invitación no encontrada", already_used: "Esta invitación ya fue utilizada", expired: "Esta invitación ha expirado" };
+          const reasons = { not_found: "Invitación no encontrada", already_used: "Esta invitación ya fue utilizada", expired: "Esta invitación ha expirado", deactivated: "Esta invitación fue desactivada" };
           setError(reasons[data.reason] || "Invitación inválida");
         }
       })

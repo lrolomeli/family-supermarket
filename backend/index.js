@@ -170,12 +170,13 @@ server.post("/admin/invitations", authenticate, async (req, res) => {
     const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
     if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
 
+    const multiUse = req.body.multi_use === true;
     const code = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const expiresAt = multiUse ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const { rows } = await pool.query(
-      "INSERT INTO invitations (code, created_by, expires_at) VALUES ($1, $2, $3) RETURNING *",
-      [code, req.user.uid, expiresAt]
+      "INSERT INTO invitations (code, created_by, expires_at, multi_use) VALUES ($1, $2, $3, $4) RETURNING *",
+      [code, req.user.uid, expiresAt, multiUse]
     );
 
     res.status(201).json(rows[0]);
@@ -201,16 +202,34 @@ server.get("/admin/invitations", authenticate, async (req, res) => {
   }
 });
 
+// PUT /admin/invitations/:id/deactivate - deactivate invitation (admin only)
+server.put("/admin/invitations/:id/deactivate", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { rows } = await pool.query(
+      "UPDATE invitations SET is_active = false WHERE id = $1 RETURNING *",
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).send("Invitation not found");
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 // GET /invitations/:code/validate - check if invitation is valid (public)
 server.get("/invitations/:code/validate", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT id, code, expires_at, used_by FROM invitations WHERE code = $1",
+      "SELECT id, code, expires_at, used_by, multi_use, is_active FROM invitations WHERE code = $1",
       [req.params.code]
     );
     if (!rows.length) return res.status(404).json({ valid: false, reason: "not_found" });
-    if (rows[0].used_by) return res.status(400).json({ valid: false, reason: "already_used" });
-    if (new Date(rows[0].expires_at) < new Date()) return res.status(400).json({ valid: false, reason: "expired" });
+    if (rows[0].is_active === false) return res.status(400).json({ valid: false, reason: "deactivated" });
+    if (!rows[0].multi_use && rows[0].used_by) return res.status(400).json({ valid: false, reason: "already_used" });
+    if (rows[0].expires_at && new Date(rows[0].expires_at) < new Date()) return res.status(400).json({ valid: false, reason: "expired" });
 
     res.status(200).json({ valid: true });
   } catch (error) {
@@ -233,8 +252,9 @@ server.post("/auth/register", async (req, res) => {
       [code]
     );
     if (!inv.length) return res.status(404).send("Invitación no encontrada");
-    if (inv[0].used_by) return res.status(400).send("Esta invitación ya fue utilizada");
-    if (new Date(inv[0].expires_at) < new Date()) return res.status(400).send("Esta invitación ha expirado");
+    if (inv[0].is_active === false) return res.status(400).send("Esta invitación fue desactivada");
+    if (!inv[0].multi_use && inv[0].used_by) return res.status(400).send("Esta invitación ya fue utilizada");
+    if (inv[0].expires_at && new Date(inv[0].expires_at) < new Date()) return res.status(400).send("Esta invitación ha expirado");
 
     // Check if email already exists
     const { rows: existing } = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
@@ -249,11 +269,13 @@ server.post("/auth/register", async (req, res) => {
       [uid, email, passwordHash, display_name || email.split("@")[0]]
     );
 
-    // Mark invitation as used
-    await pool.query(
-      "UPDATE invitations SET used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2",
-      [uid, inv[0].id]
-    );
+    // Mark invitation as used (only for single-use)
+    if (!inv[0].multi_use) {
+      await pool.query(
+        "UPDATE invitations SET used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2",
+        [uid, inv[0].id]
+      );
+    }
 
     // Generate JWT
     const token = jwt.sign({ uid, email }, JWT_SECRET, { expiresIn: "7d" });
