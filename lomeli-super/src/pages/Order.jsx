@@ -187,7 +187,7 @@ const Order = () => {
       if (!res.ok) throw new Error("Error al enviar orden");
       setCart([]);
       setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
+      setTimeout(() => setSubmitted(false), 2500);
     } catch (e) {
       console.error("Submit order error:", e);
       alert("Error al enviar la orden. Intenta de nuevo.");
@@ -198,21 +198,20 @@ const Order = () => {
 
   const cartTotal = cart.reduce((sum, i) => sum + i.quantity, 0);
 
-  if (submitted) {
-    return (
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", minHeight: "70vh", padding: "20px", textAlign: "center",
-      }}>
-        <div style={{ fontSize: "56px", marginBottom: "12px" }}>✅</div>
-        <h2 style={{ color: "#15803d", margin: "0 0 8px", fontSize: "22px" }}>Orden enviada</h2>
-        <p style={{ color: "#6b7280", fontSize: "15px" }}>Tu pedido ha sido recibido.</p>
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: "16px 16px 120px", maxWidth: "600px", margin: "0 auto" }}>
+      {/* Toast de éxito */}
+      {submitted && (
+        <div style={{
+          position: "fixed", top: "16px", left: "50%", transform: "translateX(-50%)",
+          background: "#15803d", color: "#fff", padding: "12px 24px", borderRadius: "12px",
+          fontSize: "15px", fontWeight: 600, zIndex: 400, boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+          display: "flex", alignItems: "center", gap: "8px",
+          animation: "toastIn 0.3s ease",
+        }}>
+          ✅ Orden enviada
+        </div>
+      )}
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
         <h2 style={{ margin: "0 0 4px", color: "#111827", fontSize: "22px", fontWeight: 700 }}>
