@@ -73,6 +73,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
   });
   const [imageFile, setImageFile] = useState(null);
   const [editImageFile, setEditImageFile] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   const filtered = catalog.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -180,50 +181,70 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
         </div>
       )}
 
-      {/* Product cards */}
+      {/* Product cards (accordion) */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {filtered.map(product => (
-          <div key={product.id} style={{
-            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
-            padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-            opacity: product.available !== false ? 1 : 0.5,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-              <span style={{ flex: 1, fontSize: "14px", fontWeight: 600, color: "#111827" }}>{product.name}</span>
-              <span style={{ fontSize: "11px", color: "#9ca3af", background: "#f3f4f6", padding: "2px 8px", borderRadius: "6px" }}>
-                {product.category || "general"}
-              </span>
-              <button onClick={() => onToggleAvailable(product.id, !product.available)} style={{
-                padding: "2px 10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: 600,
-                background: product.available !== false ? "#dcfce7" : "#fee2e2",
-                color: product.available !== false ? "#15803d" : "#ef4444",
+        {filtered.map(product => {
+          const isOpen = expandedId === product.id;
+          return (
+            <div key={product.id} style={{
+              background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+              opacity: product.available !== false ? 1 : 0.5,
+              overflow: "hidden",
+            }}>
+              {/* Row 1: name + badges (always visible, tappable) */}
+              <div onClick={() => setExpandedId(isOpen ? null : product.id)} style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                padding: "12px 14px", cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
               }}>
-                {product.available !== false ? "✓" : "✕"}
-              </button>
+                <span style={{ flex: 1, fontSize: "14px", fontWeight: 600, color: "#111827", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {product.name}
+                </span>
+                <span style={{ fontSize: "11px", color: "#9ca3af", background: "#f3f4f6", padding: "2px 8px", borderRadius: "6px", flexShrink: 0 }}>
+                  {product.category || "general"}
+                </span>
+                <button onClick={e => { e.stopPropagation(); onToggleAvailable(product.id, !product.available); }} style={{
+                  padding: "2px 10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: 600, flexShrink: 0,
+                  background: product.available !== false ? "#dcfce7" : "#fee2e2",
+                  color: product.available !== false ? "#15803d" : "#ef4444",
+                }}>
+                  {product.available !== false ? "✓" : "✕"}
+                </button>
+                <span style={{ fontSize: "14px", color: "#9ca3af", transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .2s", flexShrink: 0 }}>▼</span>
+              </div>
+
+              {/* Expanded content */}
+              {isOpen && (
+                <div style={{ padding: "0 14px 14px", borderTop: "1px solid #f3f4f6" }}>
+                  {/* Row 2: price inputs side by side */}
+                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", marginBottom: "10px" }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "11px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>$/pieza</label>
+                      <input type="number" min="0" step="0.5"
+                        value={editingPrices[product.id]?.price_piece ?? product.price_piece}
+                        onChange={e => onPriceChange(product.id, "price_piece", e.target.value)}
+                        style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1.5px solid #e5e7eb", fontSize: "14px", textAlign: "right", boxSizing: "border-box" }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "11px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>$/kilo</label>
+                      <input type="number" min="0" step="0.5"
+                        value={editingPrices[product.id]?.price_kg ?? product.price_kg}
+                        onChange={e => onPriceChange(product.id, "price_kg", e.target.value)}
+                        style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1.5px solid #e5e7eb", fontSize: "14px", textAlign: "right", boxSizing: "border-box" }} />
+                    </div>
+                  </div>
+                  {/* Row 3: action buttons */}
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <ActionBtn onClick={() => onSaveOne(product.id)} bg="#f0fdf4" color="#15803d">💾 Guardar</ActionBtn>
+                    <ActionBtn onClick={() => handleEditProduct(product)} bg="#eff6ff" color="#2563eb">✏️ Editar</ActionBtn>
+                    <ActionBtn onClick={() => { if (confirm("¿Eliminar este producto?")) onDeleteProduct(product.id); }} bg="#fef2f2" color="#dc2626">🗑️</ActionBtn>
+                  </div>
+                </div>
+              )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "12px", color: "#9ca3af", width: "28px" }}>$/pz</span>
-              <input type="number" min="0" step="0.5"
-                value={editingPrices[product.id]?.price_piece ?? product.price_piece}
-                onChange={e => onPriceChange(product.id, "price_piece", e.target.value)}
-                style={{ flex: 1, padding: "6px 8px", borderRadius: "8px", border: "1.5px solid #e5e7eb", fontSize: "14px", textAlign: "right" }} />
-              <span style={{ fontSize: "12px", color: "#9ca3af", width: "28px" }}>$/kg</span>
-              <input type="number" min="0" step="0.5"
-                value={editingPrices[product.id]?.price_kg ?? product.price_kg}
-                onChange={e => onPriceChange(product.id, "price_kg", e.target.value)}
-                style={{ flex: 1, padding: "6px 8px", borderRadius: "8px", border: "1.5px solid #e5e7eb", fontSize: "14px", textAlign: "right" }} />
-              <button onClick={() => onSaveOne(product.id)} style={{
-                padding: "6px 10px", background: "#f0fdf4", color: "#15803d", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-              }}>💾</button>
-              <button onClick={() => handleEditProduct(product)} style={{
-                padding: "6px 10px", background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-              }}>✏️</button>
-              <button onClick={() => { if (confirm("¿Eliminar este producto?")) onDeleteProduct(product.id); }} style={{
-                padding: "6px 10px", background: "#fef2f2", color: "#dc2626", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-              }}>🗑️</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Edit Product Modal */}
