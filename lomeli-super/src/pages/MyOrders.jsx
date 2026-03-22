@@ -5,11 +5,11 @@ import apiFetch from "../api";
 import { calcOrderTotal, formatMXN } from "../utils/pricing";
 
 const STATUS_COLORS = {
-  pending:     { bg: "#fff8e1", color: "#f59e0b", label: "Pendiente" },
-  in_progress: { bg: "#dbeafe", color: "#3b82f6", label: "En Progreso" },
-  delivered:   { bg: "#dcfce7", color: "#22c55e", label: "Entregado" },
-  completed:   { bg: "#e8f5e9", color: "#22c55e", label: "Completado" },
-  cancelled:   { bg: "#fce4ec", color: "#ef4444", label: "Cancelado" },
+  pending:     { bg: "#fffbeb", color: "#d97706", label: "Pendiente", icon: "🕐" },
+  in_progress: { bg: "#eff6ff", color: "#2563eb", label: "En Progreso", icon: "📦" },
+  delivered:   { bg: "#f0fdf4", color: "#16a34a", label: "Entregado", icon: "✅" },
+  completed:   { bg: "#f0fdf4", color: "#16a34a", label: "Completado", icon: "✅" },
+  cancelled:   { bg: "#fef2f2", color: "#dc2626", label: "Cancelado", icon: "❌" },
 };
 
 const StatusBadge = ({ status = "pending" }) => {
@@ -17,13 +17,26 @@ const StatusBadge = ({ status = "pending" }) => {
   return (
     <span style={{
       background: s.bg, color: s.color,
-      padding: "2px 10px", borderRadius: "999px",
-      fontSize: "12px", fontWeight: 600, textTransform: "uppercase",
+      padding: "4px 10px", borderRadius: "999px",
+      fontSize: "11px", fontWeight: 700, letterSpacing: "0.3px",
+      display: "inline-flex", alignItems: "center", gap: "4px",
     }}>
-      {s.label}
+      {s.icon} {s.label}
     </span>
   );
 };
+
+const ActionBtn = ({ onClick, bg, color, children }) => (
+  <button onClick={onClick} style={{
+    padding: "10px 0", background: bg, color,
+    border: "none", borderRadius: "10px", cursor: "pointer",
+    fontSize: "13px", fontWeight: 600, flex: 1,
+    WebkitTapHighlightColor: "transparent",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+  }}>
+    {children}
+  </button>
+);
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -41,50 +54,31 @@ const MyOrders = () => {
       .catch(console.error);
   }, []);
 
-  // Check for local user or Firebase user
   const firebaseUser = auth.currentUser;
   const localUser = !firebaseUser ? JSON.parse(localStorage.getItem("local_user") || "null") : null;
   const isAuthenticated = !!firebaseUser || !!localUser;
 
   const showNotification = (title, message, type = 'success') => {
-    setNotification({
-      title,
-      message,
-      type,
-      timestamp: new Date()
-    });
-  };
-
-  const closeNotification = () => {
-    setNotification(null);
+    setNotification({ title, message, type });
   };
 
   const handleSaveAsFavorite = async (order) => {
     const name = prompt("¿Cómo quieres llamar a este pedido favorito?");
     if (!name || !name.trim()) return;
-    
     try {
       const response = await apiFetch(`${API_BASE_URL}/favorites`, {
         method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          products: order.products
-        }),
+        body: JSON.stringify({ name: name.trim(), products: order.products }),
       });
-      
       if (response.ok) {
-        showNotification(
-          "Favorito Guardado",
-          "Este pedido ha sido guardado en tus favoritos para poder pedirlo nuevamente.",
-          'success'
-        );
+        showNotification("Favorito Guardado", "Pedido guardado en tus favoritos.", 'success');
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo guardar el favorito");
       }
-    } catch (error) {
+    } catch (err) {
       setError("Error de conexión. Intenta nuevamente.");
-      console.error("Error saving favorite:", error);
+      console.error("Error saving favorite:", err);
     }
   };
 
@@ -96,47 +90,37 @@ const MyOrders = () => {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    refreshOrders().catch((e) => console.error("Error fetching orders:", e));
+    refreshOrders().catch(e => console.error("Error fetching orders:", e));
   }, [isAuthenticated]);
 
-  // Refresh orders when page becomes visible (user returns to tab)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && isAuthenticated) {
-        refreshOrders().catch((e) => console.error("Error refreshing orders on visibility change:", e));
+        refreshOrders().catch(e => console.error("Error refreshing orders:", e));
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isAuthenticated]);
 
   const handleEditClick = (order) => {
-    // Refresh orders before editing to get latest status
-    refreshOrders().catch((e) => console.error("Error refreshing orders before edit:", e));
+    refreshOrders().catch(e => console.error("Error refreshing:", e));
     setEditingOrderId(order.id);
-    setEditedProducts(order.products.map((p) => ({ ...p })));
+    setEditedProducts(order.products.map(p => ({ ...p })));
   };
 
   const handleCancelEdit = () => {
-    if (editedProducts.length === 0) {
-      setEditingOrderId(null);
-      setEditedProducts([]);
-      return;
-    }
-    
-    if (confirm("¿Cancelar la edición? Se perderán los cambios no guardados.")) {
+    if (editedProducts.length === 0 || confirm("¿Cancelar la edición?")) {
       setEditingOrderId(null);
       setEditedProducts([]);
       setError("");
       setSuccess("");
-      // Refresh after canceling to get latest status
-      refreshOrders().catch((e) => console.error("Error refreshing orders after cancel:", e));
+      refreshOrders().catch(e => console.error("Error refreshing:", e));
     }
   };
 
   const handleProductChange = (index, field, value) => {
-    setEditedProducts((prev) =>
+    setEditedProducts(prev =>
       prev.map((p, i) =>
         i === index ? { ...p, [field]: field === "quantity" ? Number(value) : value } : p
       )
@@ -146,65 +130,46 @@ const MyOrders = () => {
   const handleSaveEdit = async (orderId) => {
     setError("");
     setSuccess("");
-    
-    // Find the order to check its status
     const order = orders.find(o => o.id === orderId);
-    
-    // If order is in progress, send as a request instead of updating directly
     if (order && order.status === 'in_progress') {
       await handleRequestChange(orderId, 'modify', editedProducts);
       return;
     }
-    
-    // Normal save for pending orders
     try {
       const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}`, {
         method: "PUT",
         body: JSON.stringify({ products: editedProducts }),
       });
-      
       if (response.ok) {
-        showNotification(
-          "¡Pedido Actualizado!",
-          "Tu pedido ha sido actualizado exitosamente. Los cambios están listos.",
-          'success'
-        );
+        showNotification("¡Pedido Actualizado!", "Tu pedido ha sido actualizado exitosamente.", 'success');
         setEditingOrderId(null);
         await refreshOrders();
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo actualizar el pedido");
       }
-    } catch (error) {
+    } catch (err) {
       setError("Error de conexión. Intenta nuevamente.");
-      console.error("Error updating order:", error);
+      console.error("Error updating order:", err);
     }
   };
 
   const handleDeleteProduct = async (orderId, productIndex) => {
     setError("");
     setSuccess("");
-    
-    // If we're in edit mode, just remove from local state with confirmation
     if (editingOrderId === orderId) {
       const product = editedProducts[productIndex];
-      if (!confirm(`¿Eliminar "${product.name}" del pedido?`)) {
-        return;
-      }
-      
+      if (!confirm(`¿Eliminar "${product.name}" del pedido?`)) return;
       setEditedProducts(prev => prev.filter((_, i) => i !== productIndex));
       setSuccess("Producto eliminado. Guarda los cambios para aplicar.");
       setTimeout(() => setSuccess(""), 3000);
       return;
     }
-    
-    // Otherwise, call the API directly
     try {
       const response = await apiFetch(
         `${API_BASE_URL}/orders/${orderId}/products/${productIndex}`,
         { method: "DELETE" }
       );
-      
       if (response.ok) {
         setSuccess("Producto eliminado del pedido");
         await refreshOrders();
@@ -213,21 +178,18 @@ const MyOrders = () => {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo eliminar el producto");
       }
-    } catch (error) {
+    } catch (err) {
       setError("Error de conexión. Intenta nuevamente.");
-      console.error("Error deleting product:", error);
+      console.error("Error deleting product:", err);
     }
   };
 
   const handleRemoveOrder = async (id) => {
     setError("");
     setSuccess("");
-    
     if (!confirm("¿Eliminar este pedido?")) return;
-    
     try {
       const response = await apiFetch(`${API_BASE_URL}/orders/${id}`, { method: "DELETE" });
-      
       if (response.ok) {
         setSuccess("Pedido eliminado exitosamente");
         await refreshOrders();
@@ -236,21 +198,18 @@ const MyOrders = () => {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo eliminar el pedido");
       }
-    } catch (error) {
+    } catch (err) {
       setError("Error de conexión. Intenta nuevamente.");
-      console.error("Error deleting order:", error);
+      console.error("Error deleting order:", err);
     }
   };
 
   const handleRequestChange = async (orderId, requestType = "modify", editedProductsData = null) => {
     let message = "";
-    
     if (requestType === "modify" && editedProductsData) {
-      // Create detailed message about the changes
       const order = orders.find(o => o.id === orderId);
       const changes = [];
-      
-      editedProductsData.forEach((newProduct, index) => {
+      editedProductsData.forEach((newProduct) => {
         const oldProduct = order?.products?.find(p => p.name === newProduct.name);
         if (oldProduct) {
           if (oldProduct.quantity !== newProduct.quantity || oldProduct.unit !== newProduct.unit) {
@@ -260,29 +219,23 @@ const MyOrders = () => {
           changes.push(`+ ${newProduct.name}: ${newProduct.quantity} ${newProduct.unit}`);
         }
       });
-      
-      // Check for removed products
-      order?.products?.forEach(oldProduct => {
-        const exists = editedProductsData.find(p => p.name === oldProduct.name);
-        if (!exists) {
+      const order2 = orders.find(o => o.id === orderId);
+      order2?.products?.forEach(oldProduct => {
+        if (!editedProductsData.find(p => p.name === oldProduct.name)) {
           changes.push(`- ${oldProduct.name}: ${oldProduct.quantity} ${oldProduct.unit}`);
         }
       });
-      
       message = changes.length > 0 ? changes.join(', ') : "No se detectaron cambios";
     } else {
-      // Regular request with prompt
       message = prompt(
-        requestType === "cancel" 
-          ? "¿Por qué necesitas cancelar este pedido?" 
+        requestType === "cancel"
+          ? "¿Por qué necesitas cancelar este pedido?"
           : "Describe los cambios que necesitas en tu pedido:"
       );
       if (!message || !message.trim()) return;
     }
-    
     setError("");
     setSuccess("");
-    
     try {
       const response = await apiFetch(`${API_BASE_URL}/orders/${orderId}/requests`, {
         method: "POST",
@@ -292,273 +245,254 @@ const MyOrders = () => {
           proposed_changes: editedProductsData || null
         }),
       });
-      
       if (response.ok) {
-        if (requestType === "modify" && editedProductsData) {
-          showNotification(
-            "Solicitud Enviada",
-            "Tus cambios han sido enviados al administrador. Si los aprueba, tu pedido será actualizado automáticamente. Contacta al administrador para agilizar el proceso.",
-            'info'
-          );
-          setEditingOrderId(null); // Exit edit mode after sending request
-        } else {
-          showNotification(
-            "Solicitud Enviada", 
-            "Tu solicitud ha sido enviada al administrador. Te notificaremos cuando responda.",
-            'info'
-          );
-        }
+        showNotification(
+          "Solicitud Enviada",
+          requestType === "modify" && editedProductsData
+            ? "Tus cambios han sido enviados al administrador para aprobación."
+            : "Tu solicitud ha sido enviada al administrador.",
+          'info'
+        );
+        if (requestType === "modify" && editedProductsData) setEditingOrderId(null);
       } else {
         const errorData = await response.json();
         setError(errorData.message || "No se pudo enviar la solicitud");
       }
-    } catch (error) {
+    } catch (err) {
       setError("Error de conexión. Intenta nuevamente.");
-      console.error("Error requesting change:", error);
+      console.error("Error requesting change:", err);
     }
   };
 
   const getProductImage = (name) => {
-    const found = productCatalog.find((p) => p.name === name);
+    const found = productCatalog.find(p => p.name === name);
     const img = found?.image;
     return img ? `${API_BASE_URL}${img}` : '/assets/default-product.svg';
   };
 
-  return (
-    <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px" }}>
-      <h2 style={{ marginBottom: "20px" }}>Mis Pedidos</h2>
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
 
-      {/* Error and Success Messages */}
+  return (
+    <div style={{ padding: "16px 16px 120px", maxWidth: "600px", margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "16px" }}>
+        <h2 style={{ margin: "0 0 4px", color: "#111827", fontSize: "22px", fontWeight: 700 }}>
+          Mis Pedidos
+        </h2>
+        <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af" }}>
+          Revisa y administra tus pedidos
+        </p>
+      </div>
+
+      {/* Error / Success toasts */}
       {error && (
         <div style={{
-          marginBottom: "16px", padding: "12px 16px", borderRadius: "8px",
-          backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626",
-          display: "flex", justifyContent: "space-between", alignItems: "center"
+          marginBottom: "12px", padding: "10px 14px", borderRadius: "12px",
+          background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626",
+          fontSize: "13px", display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
           <span>⚠️ {error}</span>
-          <button 
-            onClick={() => setError("")}
-            style={{
-              background: "none", border: "none", color: "#dc2626", 
-              cursor: "pointer", fontSize: "18px", padding: "0"
-            }}
-          >
-            ×
-          </button>
+          <button onClick={() => setError("")} style={{
+            background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: "18px", padding: "0 0 0 8px",
+          }}>×</button>
         </div>
       )}
-      
       {success && (
         <div style={{
-          marginBottom: "16px", padding: "12px 16px", borderRadius: "8px",
-          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a",
-          display: "flex", justifyContent: "space-between", alignItems: "center"
+          marginBottom: "12px", padding: "10px 14px", borderRadius: "12px",
+          background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a",
+          fontSize: "13px", display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
           <span>✅ {success}</span>
-          <button 
-            onClick={() => setSuccess("")}
-            style={{
-              background: "none", border: "none", color: "#16a34a", 
-              cursor: "pointer", fontSize: "18px", padding: "0"
-            }}
-          >
-            ×
-          </button>
+          <button onClick={() => setSuccess("")} style={{
+            background: "none", border: "none", color: "#16a34a", cursor: "pointer", fontSize: "18px", padding: "0 0 0 8px",
+          }}>×</button>
         </div>
       )}
 
+      {/* Empty state */}
       {orders.length === 0 ? (
-        <div style={{
-          textAlign: "center", padding: "48px", background: "#f9f9f9",
-          borderRadius: "12px", color: "#888"
-        }}>
-          <p style={{ fontSize: "18px" }}>Aún no tienes pedidos.</p>
+        <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
+          <div style={{ fontSize: "48px", marginBottom: "8px" }}>📋</div>
+          <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>Aún no tienes pedidos</p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {orders.map((order) => (
-            <div key={order.id} style={{
-              border: "1px solid #e5e7eb", borderRadius: "12px",
-              padding: "20px", background: "#fff",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
-            }}>
-              {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                <span style={{ fontWeight: 600, color: "#374151" }}>Pedido #{order.id}</span>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  {productCatalog.length > 0 && (
-                    <span style={{ fontWeight: 700, color: "#22c55e", fontSize: "15px" }}>
-                      {formatMXN(calcOrderTotal(order.products, productCatalog))}
-                    </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {orders.map(order => {
+            const isEditing = editingOrderId === order.id;
+            const statusInfo = STATUS_COLORS[order.status] || STATUS_COLORS.pending;
+            const total = productCatalog.length > 0 ? calcOrderTotal(order.products, productCatalog) : null;
+
+            return (
+              <div key={order.id} style={{
+                borderRadius: "14px", background: "#fff", overflow: "hidden",
+                border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+              }}>
+                {/* Order header */}
+                <div style={{
+                  padding: "12px 14px", background: "#f9fafb",
+                  borderBottom: "1px solid #f3f4f6",
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                }}>
+                  <div>
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>
+                      Pedido #{order.id}
+                    </div>
+                    {order.created_at && (
+                      <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
+                        {formatDate(order.created_at)}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {total !== null && (
+                      <span style={{ fontWeight: 700, color: "#15803d", fontSize: "14px" }}>
+                        {formatMXN(total)}
+                      </span>
+                    )}
+                    <StatusBadge status={order.status} />
+                  </div>
+                </div>
+
+                {/* Products */}
+                <div style={{ padding: "10px 14px" }}>
+                  {isEditing ? (
+                    /* Edit mode */
+                    <div>
+                      {editedProducts.map((product, index) => (
+                        <div key={index} style={{
+                          display: "flex", alignItems: "center", gap: "8px",
+                          padding: "8px 0",
+                          borderBottom: index < editedProducts.length - 1 ? "1px solid #f3f4f6" : "none",
+                        }}>
+                          <img src={getProductImage(product.name)} alt={product.name}
+                            style={{ width: "34px", height: "34px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+                          <span style={{ flex: 1, fontSize: "13px", color: "#374151", fontWeight: 500, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {product.name}
+                          </span>
+                          <input
+                            type="number" min="0.5" step="0.5" value={product.quantity}
+                            onChange={e => handleProductChange(index, "quantity", e.target.value)}
+                            style={{
+                              width: "50px", padding: "6px 4px", borderRadius: "8px",
+                              border: "1.5px solid #d1d5db", fontSize: "14px", textAlign: "center",
+                            }}
+                          />
+                          <select
+                            value={product.unit}
+                            onChange={e => handleProductChange(index, "unit", e.target.value)}
+                            style={{
+                              padding: "6px 4px", borderRadius: "8px",
+                              border: "1.5px solid #d1d5db", fontSize: "13px", background: "#fff",
+                            }}
+                          >
+                            <option value="pieces">pz</option>
+                            <option value="kg">kg</option>
+                          </select>
+                          <button onClick={() => handleDeleteProduct(order.id, index)} style={{
+                            background: "#fef2f2", border: "none", color: "#ef4444",
+                            width: "30px", height: "30px", borderRadius: "8px",
+                            fontSize: "14px", cursor: "pointer", flexShrink: 0,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            WebkitTapHighlightColor: "transparent",
+                          }}>✕</button>
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                        <ActionBtn onClick={() => handleSaveEdit(order.id)} bg="#15803d" color="#fff">
+                          💾 Guardar
+                        </ActionBtn>
+                        <ActionBtn onClick={handleCancelEdit} bg="#f3f4f6" color="#374151">
+                          Cancelar
+                        </ActionBtn>
+                      </div>
+                    </div>
+                  ) : (
+                    /* View mode */
+                    <div>
+                      {order.products.map((product, idx) => (
+                        <div key={idx} style={{
+                          display: "flex", alignItems: "center", gap: "10px",
+                          padding: "6px 0",
+                          borderBottom: idx < order.products.length - 1 ? "1px solid #f3f4f6" : "none",
+                        }}>
+                          <img src={getProductImage(product.name)} alt={product.name}
+                            style={{ width: "32px", height: "32px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+                          <span style={{ flex: 1, fontSize: "13px", color: "#374151", fontWeight: 500 }}>
+                            {product.name}
+                          </span>
+                          <span style={{ fontSize: "12px", color: "#6b7280", whiteSpace: "nowrap" }}>
+                            {product.quantity} {product.unit === "pieces" ? "pz" : "kg"}
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Action buttons */}
+                      <div style={{ display: "flex", gap: "6px", marginTop: "12px" }}>
+                        {order.status !== 'delivered' && (
+                          <ActionBtn onClick={() => handleEditClick(order)} bg="#eff6ff" color="#2563eb">
+                            ✏️ Editar
+                          </ActionBtn>
+                        )}
+                        <ActionBtn onClick={() => handleSaveAsFavorite(order)} bg="#fffbeb" color="#d97706">
+                          ⭐ Favorito
+                        </ActionBtn>
+                        {order.status !== 'in_progress' && order.status !== 'delivered' && (
+                          <ActionBtn onClick={() => handleRemoveOrder(order.id)} bg="#fef2f2" color="#dc2626">
+                            🗑️
+                          </ActionBtn>
+                        )}
+                      </div>
+                    </div>
                   )}
-                  <StatusBadge status={order.status} />
                 </div>
               </div>
-
-              {/* Products */}
-              {editingOrderId === order.id ? (
-                <div>
-                  {editedProducts.map((product, index) => (
-                    <div key={index} style={{
-                      display: "flex", alignItems: "center", gap: "10px",
-                      padding: "8px 0", borderBottom: "1px solid #f3f4f6"
-                    }}>
-                      <img src={getProductImage(product.name)} alt={product.name}
-                        style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover" }} />
-                      <span style={{ flex: 1, fontSize: "14px" }}>{product.name}</span>
-                      <input
-                        type="number" min="1" value={product.quantity}
-                        onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
-                        style={{ width: "52px", padding: "4px", borderRadius: "6px", border: "1px solid #d1d5db" }}
-                      />
-                      <select
-                        value={product.unit}
-                        onChange={(e) => handleProductChange(index, "unit", e.target.value)}
-                        style={{ padding: "4px", borderRadius: "6px", border: "1px solid #d1d5db" }}
-                      >
-                        <option value="pieces">pzs</option>
-                        <option value="kg">kg</option>
-                      </select>
-                      <button onClick={() => handleDeleteProduct(order.id, index)}
-                        style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "18px" }}
-                        title="Eliminar producto">✕</button>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
-                    <button onClick={() => handleSaveEdit(order.id)} style={{
-                      padding: "7px 18px", background: "#22c55e", color: "#fff",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600
-                    }}>Guardar</button>
-                    <button onClick={handleCancelEdit} style={{
-                      padding: "7px 18px", background: "#f3f4f6", color: "#374151",
-                      border: "none", borderRadius: "8px", cursor: "pointer"
-                    }}>Cancelar</button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "14px" }}>
-                    {order.products.map((product, index) => (
-                      <div key={index} style={{
-                        display: "flex", alignItems: "center", gap: "8px",
-                        background: "#f9fafb", borderRadius: "8px", padding: "6px 10px"
-                      }}>
-                        <img src={getProductImage(product.name)} alt={product.name}
-                            style={{ width: "28px", height: "28px", borderRadius: "4px", objectFit: "cover" }} />
-                        <span style={{ fontSize: "13px", color: "#374151" }}>
-                          {product.name} — {product.quantity} {product.unit}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    {order.status !== 'delivered' && (
-                      <button onClick={() => handleEditClick(order)} style={{
-                        padding: "6px 16px", background: "#3b82f6", color: "#fff",
-                        border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                      }}>Editar</button>
-                    )}
-                    <button onClick={() => handleSaveAsFavorite(order)} style={{
-                      padding: "6px 16px", background: "#f59e0b", color: "#fff",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>⭐ Favorito</button>
-                    {order.status !== 'in_progress' && order.status !== 'delivered' && (
-                      <button onClick={() => handleRemoveOrder(order.id)} style={{
-                        padding: "6px 16px", background: "#fee2e2", color: "#ef4444",
-                        border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                      }}>Eliminar</button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Notification Modal */}
       {notification && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000
-        }}>
+        <>
+          <div onClick={() => setNotification(null)} style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300,
+          }} />
           <div style={{
-            backgroundColor: "#fff",
-            borderRadius: "12px",
-            padding: "24px",
-            maxWidth: "400px",
-            width: "90%",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+            background: "#fff", borderRadius: "16px", padding: "24px 20px",
+            maxWidth: "340px", width: "85%", zIndex: 301,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)", textAlign: "center",
           }}>
-            {/* Icon based on type */}
             <div style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 16px",
-              fontSize: "24px",
-              backgroundColor: notification.type === 'success' ? '#dcfce7' : 
-                               notification.type === 'info' ? '#dbeafe' : '#fef2f2',
-              color: notification.type === 'success' ? '#166534' : 
-                     notification.type === 'info' ? '#1d4ed8' : '#dc2626'
+              width: "48px", height: "48px", borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 14px", fontSize: "22px",
+              background: notification.type === 'success' ? '#dcfce7' : notification.type === 'info' ? '#dbeafe' : '#fef2f2',
+              color: notification.type === 'success' ? '#166534' : notification.type === 'info' ? '#1d4ed8' : '#dc2626',
             }}>
-              {notification.type === 'success' ? '✓' : 
-               notification.type === 'info' ? 'ℹ' : '⚠'}
+              {notification.type === 'success' ? '✓' : notification.type === 'info' ? 'ℹ' : '⚠'}
             </div>
-
-            {/* Title */}
-            <h3 style={{
-              margin: "0 0 8px 0",
-              fontSize: "18px",
-              fontWeight: 600,
-              color: "#374151",
-              textAlign: "center"
-            }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: "17px", fontWeight: 700, color: "#111827" }}>
               {notification.title}
             </h3>
-
-            {/* Message */}
-            <p style={{
-              margin: "0 0 20px 0",
-              fontSize: "14px",
-              color: "#6b7280",
-              lineHeight: "1.5",
-              textAlign: "center"
-            }}>
+            <p style={{ margin: "0 0 18px", fontSize: "13px", color: "#6b7280", lineHeight: 1.5 }}>
               {notification.message}
             </p>
-
-            {/* OK Button */}
-            <button
-              onClick={closeNotification}
-              style={{
-                width: "100%",
-                padding: "12px",
-                backgroundColor: notification.type === 'success' ? '#22c55e' : 
-                               notification.type === 'info' ? '#3b82f6' : '#ef4444',
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
+            <button onClick={() => setNotification(null)} style={{
+              width: "100%", padding: "12px", border: "none", borderRadius: "10px",
+              fontSize: "14px", fontWeight: 700, cursor: "pointer", color: "#fff",
+              WebkitTapHighlightColor: "transparent",
+              background: notification.type === 'success' ? '#15803d' : notification.type === 'info' ? '#2563eb' : '#dc2626',
+            }}>
               Entendido
             </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
