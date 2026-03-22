@@ -652,22 +652,23 @@ const Admin = () => {
         </p>
       </div>
 
-      {/* Scrollable tabs */}
+      {/* Grid 3x2 tabs */}
       <div style={{
-        display: "flex", gap: "6px", marginBottom: "16px",
-        overflowX: "auto", WebkitOverflowScrolling: "touch",
-        paddingBottom: "4px", msOverflowStyle: "none", scrollbarWidth: "none",
+        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px",
+        marginBottom: "16px",
       }}>
         {TAB_ITEMS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer",
-            fontWeight: 600, fontSize: "12px", whiteSpace: "nowrap",
+            padding: "10px 6px", borderRadius: "10px", border: "none", cursor: "pointer",
+            fontWeight: 600, fontSize: "12px",
             background: tab === t.key ? "#111827" : "#f3f4f6",
             color: tab === t.key ? "#fff" : "#6b7280",
             WebkitTapHighlightColor: "transparent",
             transition: "all .15s",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: "2px",
           }}>
-            {t.icon} {t.label}
+            <span style={{ fontSize: "18px", lineHeight: 1 }}>{t.icon}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
