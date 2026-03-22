@@ -1,70 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
-
-// Carrusel decorativo de productos
-const ProductCarousel = ({ products }) => {
-  const [page, setPage] = useState(0);
-  const perPage = 5;
-  const totalPages = Math.ceil(products.length / perPage);
-
-  useEffect(() => {
-    if (totalPages <= 1) return;
-    const timer = setInterval(() => {
-      setPage(p => (p + 1) % totalPages);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [totalPages]);
-
-  if (products.length === 0) return null;
-
-  const visible = products.slice(page * perPage, page * perPage + perPage);
-
-  return (
-    <div style={{ marginBottom: "20px" }}>
-      <div style={{
-        display: "flex", gap: "10px", justifyContent: "center",
-        overflow: "hidden", padding: "4px 0",
-      }}>
-        {visible.map(p => (
-          <div key={p.id} style={{
-            width: "90px", textAlign: "center", flexShrink: 0,
-            pointerEvents: "none", userSelect: "none",
-          }}>
-            <img
-              src={p.image || "/assets/default-product.svg"}
-              alt={p.name}
-              style={{
-                width: "70px", height: "70px", borderRadius: "14px",
-                objectFit: "cover", background: "#f3f4f6",
-              }}
-            />
-            <p style={{
-              margin: "6px 0 0", fontSize: "11px", color: "#6b7280",
-              lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}>{p.name}</p>
-          </div>
-        ))}
-      </div>
-      {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "10px" }}>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i)}
-              style={{
-                width: "8px", height: "8px", borderRadius: "50%", border: "none",
-                background: i === page ? "#15803d" : "#d1d5db", cursor: "pointer",
-                padding: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Bottom sheet para seleccionar cantidad y unidad
 const ProductSheet = ({ product, onAdd, onClose }) => {
@@ -242,16 +178,6 @@ const Order = () => {
 
   const cartTotal = cart.reduce((sum, i) => sum + i.quantity, 0);
 
-  // Shuffle products once for the carousel
-  const shuffled = useMemo(() => {
-    const arr = [...products];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-  }, [products]);
-
   if (submitted) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "20px", textAlign: "center" }}>
@@ -265,8 +191,6 @@ const Order = () => {
   return (
     <div style={{ padding: "16px", maxWidth: "600px", margin: "0 auto", paddingBottom: "100px" }}>
       <h2 style={{ margin: "0 0 16px", color: "#15803d", fontSize: "22px" }}>Nuevo Pedido</h2>
-
-      <ProductCarousel products={shuffled} />
 
       {/* Search input */}
       <div style={{ position: "relative" }}>
