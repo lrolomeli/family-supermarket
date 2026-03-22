@@ -359,49 +359,71 @@ const ShoppingListTab = ({ orders, catalog }) => {
     );
   }
 
+  const byKg = consolidated.filter(i => i.unit === "kg");
+  const byPiece = consolidated.filter(i => i.unit !== "kg");
+
+  const renderItem = (item) => {
+    const key = `${item.name}-${item.unit}`;
+    const isDone = checked[key];
+    return (
+      <div key={key} onClick={() => toggleCheck(key)} style={{
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "10px 14px", background: "#fff", borderRadius: "12px",
+        border: "1px solid #e5e7eb", cursor: "pointer",
+        opacity: isDone ? 0.4 : 1, transition: "opacity 0.2s",
+        WebkitTapHighlightColor: "transparent",
+      }}>
+        <div style={{
+          width: "22px", height: "22px", borderRadius: "6px", flexShrink: 0,
+          border: isDone ? "none" : "2px solid #d1d5db",
+          background: isDone ? "#15803d" : "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {isDone && <span style={{ color: "#fff", fontSize: "13px" }}>✓</span>}
+        </div>
+        <img src={getProductImage(item)} alt={item.name}
+          style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+        <span style={{
+          flex: 1, fontSize: "14px", fontWeight: 600, color: "#374151",
+          textDecoration: isDone ? "line-through" : "none",
+        }}>
+          {item.name}
+        </span>
+        <span style={{
+          fontSize: "14px", fontWeight: 700, color: "#15803d",
+          background: "#f0fdf4", padding: "4px 10px", borderRadius: "8px",
+        }}>
+          {item.quantity} {item.unit === "kg" ? "kg" : "pz"}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div>
       <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "12px" }}>
         {activeOrders.length} {activeOrders.length === 1 ? "orden activa" : "órdenes activas"} · {consolidated.length} productos
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        {consolidated.map(item => {
-          const key = `${item.name}-${item.unit}`;
-          const isDone = checked[key];
-          return (
-            <div key={key} onClick={() => toggleCheck(key)} style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              padding: "10px 14px", background: "#fff", borderRadius: "12px",
-              border: "1px solid #e5e7eb", cursor: "pointer",
-              opacity: isDone ? 0.4 : 1, transition: "opacity 0.2s",
-              WebkitTapHighlightColor: "transparent",
-            }}>
-              <div style={{
-                width: "22px", height: "22px", borderRadius: "6px", flexShrink: 0,
-                border: isDone ? "none" : "2px solid #d1d5db",
-                background: isDone ? "#15803d" : "#fff",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {isDone && <span style={{ color: "#fff", fontSize: "13px" }}>✓</span>}
-              </div>
-              <img src={getProductImage(item)} alt={item.name}
-                style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
-              <span style={{
-                flex: 1, fontSize: "14px", fontWeight: 600, color: "#374151",
-                textDecoration: isDone ? "line-through" : "none",
-              }}>
-                {item.name}
-              </span>
-              <span style={{
-                fontSize: "14px", fontWeight: 700, color: "#15803d",
-                background: "#f0fdf4", padding: "4px 10px", borderRadius: "8px",
-              }}>
-                {item.quantity} {item.unit === "kg" ? "kg" : "pz"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {byKg.length > 0 && (
+        <>
+          <div style={{ fontSize: "13px", fontWeight: 700, color: "#6b7280", margin: "12px 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            ⚖️ Por Kilo ({byKg.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            {byKg.map(renderItem)}
+          </div>
+        </>
+      )}
+      {byPiece.length > 0 && (
+        <>
+          <div style={{ fontSize: "13px", fontWeight: 700, color: "#6b7280", margin: "12px 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            🔢 Por Pieza ({byPiece.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {byPiece.map(renderItem)}
+          </div>
+        </>
+      )}
     </div>
   );
 };
