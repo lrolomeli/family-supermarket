@@ -8,45 +8,59 @@ import {
 } from "recharts";
 
 const STATUS_COLORS = {
-  pending:   { bg: "#fff8e1", color: "#f59e0b" },
-  completed: { bg: "#e8f5e9", color: "#22c55e" },
-  cancelled: { bg: "#fce4ec", color: "#ef4444" },
+  pending:     { bg: "#fffbeb", color: "#d97706", label: "Pendiente", icon: "🕐" },
+  in_progress: { bg: "#eff6ff", color: "#2563eb", label: "En Progreso", icon: "📦" },
+  delivered:   { bg: "#f0fdf4", color: "#16a34a", label: "Entregado", icon: "✅" },
+  completed:   { bg: "#f0fdf4", color: "#16a34a", label: "Completado", icon: "✅" },
+  cancelled:   { bg: "#fef2f2", color: "#dc2626", label: "Cancelado", icon: "❌" },
 };
 
 const Badge = ({ status = "pending" }) => {
   const s = STATUS_COLORS[status] || STATUS_COLORS.pending;
   return (
     <span style={{
-      background: s.bg, color: s.color, padding: "2px 10px",
-      borderRadius: "999px", fontSize: "12px", fontWeight: 600, textTransform: "uppercase"
-    }}>{status === "pending" ? "Pendiente" : status === "completed" ? "Completado" : status === "cancelled" ? "Cancelado" : status}</span>
+      background: s.bg, color: s.color, padding: "4px 10px",
+      borderRadius: "999px", fontSize: "11px", fontWeight: 700,
+      display: "inline-flex", alignItems: "center", gap: "3px",
+    }}>{s.icon} {s.label}</span>
   );
 };
 
-const StatCard = ({ label, value, color = "#3b82f6" }) => (
+const StatCard = ({ label, value, color = "#3b82f6", icon }) => (
   <div style={{
-    background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-    padding: "20px 24px", flex: 1, minWidth: "140px",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+    background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+    padding: "14px 16px", flex: "1 1 calc(50% - 6px)", minWidth: "0",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
   }}>
-    <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>{label}</div>
-    <div style={{ fontSize: "28px", fontWeight: 700, color }}>{value}</div>
+    <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px" }}>{icon} {label}</div>
+    <div style={{ fontSize: "22px", fontWeight: 700, color }}>{value}</div>
   </div>
 );
 
-const TAB_DISPLAY_NAMES = {
-  "Dashboard": "Panel",
-  "Orders": "Órdenes",
-  "ShoppingList": "Lista de Compras",
-  "Users": "Usuarios",
-  "Prices": "Productos",
-  "Categories": "Categorías",
-  "Requests": "Solicitudes",
-  "Invitations": "Invitaciones"
-};
+const ActionBtn = ({ onClick, bg, color, children, disabled, style: extraStyle }) => (
+  <button onClick={onClick} disabled={disabled} style={{
+    padding: "10px 0", background: bg, color,
+    border: "none", borderRadius: "10px", cursor: disabled ? "default" : "pointer",
+    fontSize: "13px", fontWeight: 600, flex: 1,
+    WebkitTapHighlightColor: "transparent",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+    opacity: disabled ? 0.5 : 1,
+    ...extraStyle,
+  }}>
+    {children}
+  </button>
+);
 
-const TABS = ["Dashboard", "Orders", "ShoppingList", "Users", "Prices", "Categories", "Requests", "Invitations"];
+const TAB_ITEMS = [
+  { key: "Dashboard", label: "Panel", icon: "📊" },
+  { key: "Orders", label: "Órdenes", icon: "📋" },
+  { key: "ShoppingList", label: "Compras", icon: "🛒" },
+  { key: "Users", label: "Usuarios", icon: "👥" },
+  { key: "Prices", label: "Productos", icon: "🏷️" },
+  { key: "Categories", label: "Categorías", icon: "📁" },
+];
 
+// ─── PricesTab ───
 const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct, onToggleAvailable }) => {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
@@ -54,616 +68,330 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({
-    name: "",
-    price_piece: "",
-    price_kg: "",
-    category: categories[0]?.name || "general",
-    sell_by: "both"
+    name: "", price_piece: "", price_kg: "",
+    category: categories[0]?.name || "general", sell_by: "both"
   });
   const [imageFile, setImageFile] = useState(null);
   const [editImageFile, setEditImageFile] = useState(null);
 
-  const filtered = catalog.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = catalog.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  const handleSaveAll = async () => {
-    setSaving(true);
-    await onSaveAll();
-    setSaving(false);
-  };
+  const handleSaveAll = async () => { setSaving(true); await onSaveAll(); setSaving(false); };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setCsvStatus("uploading");
-    try {
-      await onCsvUpload(file);
-      setCsvStatus("ok");
-    } catch {
-      setCsvStatus("error");
-    }
+    try { await onCsvUpload(file); setCsvStatus("ok"); } catch { setCsvStatus("error"); }
     e.target.value = "";
   };
 
   const handleAddProduct = async () => {
     if (!newProduct.name.trim()) return;
-    
     try {
       await onAddProduct(newProduct, imageFile);
       setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general", sell_by: "both" });
-      setImageFile(null);
-      setShowAddForm(false);
-    } catch (error) {
-      console.error("Error adding product:", error);
-    }
-  };
-
-  const handleDeleteProduct = async (productId) => {
-    if (confirm("¿Estás seguro de eliminar este producto?")) {
-      await onDeleteProduct(productId);
-    }
+      setImageFile(null); setShowAddForm(false);
+    } catch (error) { console.error("Error adding product:", error); }
   };
 
   const handleEditProduct = (product) => {
-    setEditingProduct({
-      ...product,
-      price_piece: product.price_piece.toString(),
-      price_kg: product.price_kg.toString()
-    });
+    setEditingProduct({ ...product, price_piece: product.price_piece.toString(), price_kg: product.price_kg.toString() });
     setEditImageFile(null);
   };
 
   const handleUpdateProduct = async () => {
     if (!editingProduct.name.trim()) return;
-    
     try {
-      const updateData = {
-        name: editingProduct.name,
-        category: editingProduct.category
-      };
-      
-      await onUpdateProduct(editingProduct.id, updateData, editImageFile);
-      setEditingProduct(null);
-      setEditImageFile(null);
-    } catch (error) {
-      console.error("Error updating product:", error);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingProduct(null);
-    setEditImageFile(null);
+      await onUpdateProduct(editingProduct.id, { name: editingProduct.name, category: editingProduct.category }, editImageFile);
+      setEditingProduct(null); setEditImageFile(null);
+    } catch (error) { console.error("Error updating product:", error); }
   };
 
   return (
     <div>
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          placeholder="Buscar producto..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px", flex: 1, minWidth: "180px" }}
-        />
-        <button onClick={handleSaveAll} disabled={saving} style={{
-          padding: "7px 18px", background: "#22c55e", color: "#fff",
-          border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-        }}>
-          {saving ? "Guardando..." : "Guardar Todo"}
-        </button>
-        <label style={{
-          padding: "7px 18px", background: "#3b82f6", color: "#fff",
-          borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-        }}>
-          {csvStatus === "uploading" ? "Subiendo..." : "Subir CSV"}
-          <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
-        </label>
-        <a
-          href={`data:text/csv;charset=utf-8,id,name,price_piece,price_kg\n${catalog.map(p => `${p.id},${p.name},${p.price_piece},${p.price_kg}`).join("\n")}`}
-          download="precios.csv"
-          style={{
-            padding: "7px 18px", background: "#f3f4f6", color: "#374151",
-            borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px"
-          }}
-        >
-          Exportar CSV
-        </a>
+      {/* Search + actions */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+        <input placeholder="🔍 Buscar producto..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: "140px", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px", background: "#f9fafb" }} />
         <button onClick={() => setShowAddForm(!showAddForm)} style={{
-          padding: "7px 18px", background: "#8b5cf6", color: "#fff",
-          border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
+          padding: "10px 14px", background: "#8b5cf6", color: "#fff",
+          border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, fontSize: "13px",
         }}>
-          {showAddForm ? "Cancelar" : "Agregar Producto"}
+          {showAddForm ? "✕" : "+ Producto"}
         </button>
       </div>
-      {csvStatus === "ok" && <p style={{ color: "#22c55e", marginBottom: "10px", fontSize: "13px" }}>✅ CSV importado correctamente</p>}
-      {csvStatus === "error" && <p style={{ color: "#ef4444", marginBottom: "10px", fontSize: "13px" }}>❌ Error al importar CSV</p>}
 
-      <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "12px" }}>
-        Formato CSV: columnas <code>id, name, price_piece, price_kg</code>
-      </p>
+      <div style={{ display: "flex", gap: "6px", marginBottom: "12px", flexWrap: "wrap" }}>
+        <ActionBtn onClick={handleSaveAll} bg="#15803d" color="#fff" disabled={saving} style={{ flex: "0 1 auto", padding: "8px 14px" }}>
+          {saving ? "Guardando..." : "💾 Guardar Todo"}
+        </ActionBtn>
+        <label style={{
+          padding: "8px 14px", background: "#eff6ff", color: "#2563eb",
+          borderRadius: "10px", cursor: "pointer", fontWeight: 600, fontSize: "13px",
+          display: "flex", alignItems: "center", gap: "4px",
+        }}>
+          {csvStatus === "uploading" ? "Subiendo..." : "📤 CSV"}
+          <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
+        </label>
+        <a href={`data:text/csv;charset=utf-8,id,name,price_piece,price_kg\n${catalog.map(p => `${p.id},${p.name},${p.price_piece},${p.price_kg}`).join("\n")}`}
+          download="precios.csv" style={{
+            padding: "8px 14px", background: "#f3f4f6", color: "#374151",
+            borderRadius: "10px", textDecoration: "none", fontWeight: 600, fontSize: "13px",
+            display: "flex", alignItems: "center", gap: "4px",
+          }}>📥 Exportar</a>
+      </div>
+
+      {csvStatus === "ok" && <p style={{ color: "#16a34a", fontSize: "12px", marginBottom: "8px" }}>✅ CSV importado</p>}
+      {csvStatus === "error" && <p style={{ color: "#dc2626", fontSize: "12px", marginBottom: "8px" }}>❌ Error al importar</p>}
 
       {/* Add Product Form */}
       {showAddForm && (
-        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Agregar Nuevo Producto</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "16px" }}>
-            <input
-              placeholder="Nombre del producto"
-              value={newProduct.name}
-              onChange={e => setNewProduct({...newProduct, name: e.target.value})}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-            />
-            <input
-              type="number"
-              placeholder="Precio por pieza"
-              value={newProduct.price_piece}
-              onChange={e => setNewProduct({...newProduct, price_piece: e.target.value})}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-            />
-            <input
-              type="number"
-              placeholder="Precio por kg"
-              value={newProduct.price_kg}
-              onChange={e => setNewProduct({...newProduct, price_kg: e.target.value})}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-            />
-            <select
-              value={newProduct.category}
-              onChange={e => setNewProduct({...newProduct, category: e.target.value})}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-            >
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
-              ))}
-            </select>
-            <select
-              value={newProduct.sell_by}
-              onChange={e => setNewProduct({...newProduct, sell_by: e.target.value})}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-            >
-              <option value="both">Pieza y Kilo</option>
-              <option value="pieces">Solo Pieza</option>
-              <option value="kg">Solo Kilo</option>
-            </select>
-          </div>
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-              Imagen del Producto (opcional)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={e => setImageFile(e.target.files[0])}
-              style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px", width: "100%" }}
-            />
-          </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button onClick={handleAddProduct} style={{
-              padding: "8px 20px", background: "#8b5cf6", color: "#fff",
-              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-            }}>
-              Agregar Producto
-            </button>
-            <button onClick={() => {
-              setShowAddForm(false);
-              setNewProduct({ name: "", price_piece: "", price_kg: "", category: categories[0]?.name || "general", sell_by: "both" });
-              setImageFile(null);
-            }} style={{
-              padding: "8px 20px", background: "#f3f4f6", color: "#374151",
-              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-            }}>
-              Cancelar
-            </button>
+        <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "16px", marginBottom: "12px" }}>
+          <h4 style={{ margin: "0 0 12px", fontSize: "15px", fontWeight: 700, color: "#111827" }}>Agregar Producto</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <input placeholder="Nombre" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+              style={{ padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input type="number" placeholder="$/pieza" value={newProduct.price_piece} onChange={e => setNewProduct({...newProduct, price_piece: e.target.value})}
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
+              <input type="number" placeholder="$/kg" value={newProduct.price_kg} onChange={e => setNewProduct({...newProduct, price_kg: e.target.value})}
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <select value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})}
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }}>
+                {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+              </select>
+              <select value={newProduct.sell_by} onChange={e => setNewProduct({...newProduct, sell_by: e.target.value})}
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }}>
+                <option value="both">Pieza y Kilo</option>
+                <option value="pieces">Solo Pieza</option>
+                <option value="kg">Solo Kilo</option>
+              </select>
+            </div>
+            <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])}
+              style={{ padding: "8px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px" }} />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <ActionBtn onClick={handleAddProduct} bg="#8b5cf6" color="#fff">Agregar</ActionBtn>
+              <ActionBtn onClick={() => { setShowAddForm(false); setImageFile(null); }} bg="#f3f4f6" color="#374151">Cancelar</ActionBtn>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-          <thead>
-            <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Producto</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / pieza</th>
-              <th style={{ padding: "12px 16px", textAlign: "right", color: "#6b7280" }}>$ / kg</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Categoría</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Disponible</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((product, i) => (
-              <tr key={product.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                <td style={{ padding: "10px 16px", fontWeight: 500, color: product.available !== false ? "#374151" : "#9ca3af" }}>{product.name}</td>
-                <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                  <input type="number" min="0" step="0.5"
-                    value={editingPrices[product.id]?.price_piece ?? product.price_piece}
-                    onChange={e => onPriceChange(product.id, "price_piece", e.target.value)}
-                    style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
-                  />
-                </td>
-                <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                  <input type="number" min="0" step="0.5"
-                    value={editingPrices[product.id]?.price_kg ?? product.price_kg}
-                    onChange={e => onPriceChange(product.id, "price_kg", e.target.value)}
-                    style={{ width: "80px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #d1d5db", textAlign: "right" }}
-                  />
-                </td>
-                <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                  <span style={{
-                    padding: "4px 8px", background: "#f3f4f6", color: "#374151",
-                    borderRadius: "4px", fontSize: "12px", fontWeight: 500
-                  }}>
-                    {product.category || 'general'}
-                  </span>
-                </td>
-                <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                  <button
-                    onClick={() => onToggleAvailable(product.id, !product.available)}
-                    style={{
-                      padding: "4px 14px", border: "none", borderRadius: "6px", cursor: "pointer",
-                      fontSize: "13px", fontWeight: 500,
-                      background: product.available !== false ? "#dcfce7" : "#fee2e2",
-                      color: product.available !== false ? "#15803d" : "#ef4444",
-                    }}
-                  >
-                    {product.available !== false ? "Sí" : "No"}
-                  </button>
-                </td>
-                <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                  <button onClick={() => handleEditProduct(product)} style={{
-                    padding: "4px 14px", background: "#3b82f6", color: "#fff",
-                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
-                  }}>Editar</button>
-                  <button onClick={() => onSaveOne(product.id)} style={{
-                    padding: "4px 14px", background: "#f3f4f6", color: "#374151",
-                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", marginRight: "6px"
-                  }}>Guardar</button>
-                  <button onClick={() => handleDeleteProduct(product.id)} style={{
-                    padding: "4px 14px", background: "#fee2e2", color: "#ef4444",
-                    border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px"
-                  }}>Eliminar</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Product cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {filtered.map(product => (
+          <div key={product.id} style={{
+            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+            padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+            opacity: product.available !== false ? 1 : 0.5,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+              <span style={{ flex: 1, fontSize: "14px", fontWeight: 600, color: "#111827" }}>{product.name}</span>
+              <span style={{ fontSize: "11px", color: "#9ca3af", background: "#f3f4f6", padding: "2px 8px", borderRadius: "6px" }}>
+                {product.category || "general"}
+              </span>
+              <button onClick={() => onToggleAvailable(product.id, !product.available)} style={{
+                padding: "2px 10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: 600,
+                background: product.available !== false ? "#dcfce7" : "#fee2e2",
+                color: product.available !== false ? "#15803d" : "#ef4444",
+              }}>
+                {product.available !== false ? "✓" : "✕"}
+              </button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "12px", color: "#9ca3af", width: "28px" }}>$/pz</span>
+              <input type="number" min="0" step="0.5"
+                value={editingPrices[product.id]?.price_piece ?? product.price_piece}
+                onChange={e => onPriceChange(product.id, "price_piece", e.target.value)}
+                style={{ flex: 1, padding: "6px 8px", borderRadius: "8px", border: "1.5px solid #e5e7eb", fontSize: "14px", textAlign: "right" }} />
+              <span style={{ fontSize: "12px", color: "#9ca3af", width: "28px" }}>$/kg</span>
+              <input type="number" min="0" step="0.5"
+                value={editingPrices[product.id]?.price_kg ?? product.price_kg}
+                onChange={e => onPriceChange(product.id, "price_kg", e.target.value)}
+                style={{ flex: 1, padding: "6px 8px", borderRadius: "8px", border: "1.5px solid #e5e7eb", fontSize: "14px", textAlign: "right" }} />
+              <button onClick={() => onSaveOne(product.id)} style={{
+                padding: "6px 10px", background: "#f0fdf4", color: "#15803d", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+              }}>💾</button>
+              <button onClick={() => handleEditProduct(product)} style={{
+                padding: "6px 10px", background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+              }}>✏️</button>
+              <button onClick={() => { if (confirm("¿Eliminar este producto?")) onDeleteProduct(product.id); }} style={{
+                padding: "6px 10px", background: "#fef2f2", color: "#dc2626", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+              }}>🗑️</button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Edit Product Modal */}
       {editingProduct && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000,
-          display: "flex", alignItems: "center", justifyContent: "center"
-        }}>
+        <>
+          <div onClick={() => { setEditingProduct(null); setEditImageFile(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300 }} />
           <div style={{
-            background: "#fff", borderRadius: "12px", padding: "24px",
-            maxWidth: "500px", width: "90%", maxHeight: "90vh", overflow: "auto"
+            position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 301,
+            background: "#fff", borderRadius: "20px 20px 0 0",
+            padding: "20px 20px calc(24px + env(safe-area-inset-bottom, 0px))",
+            boxShadow: "0 -8px 30px rgba(0,0,0,0.15)",
           }}>
-            <h3 style={{ margin: "0 0 20px", fontSize: "18px", fontWeight: 600, color: "#1e293b" }}>
-              Editar Producto: {editingProduct.name}
-            </h3>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                  Nombre del Producto
-                </label>
-                <input
-                  value={editingProduct.name}
-                  onChange={e => setEditingProduct({...editingProduct, name: e.target.value})}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                  Categoría
-                </label>
-                <select
-                  value={editingProduct.category || categories[0]?.name || 'general'}
-                  onChange={e => setEditingProduct({...editingProduct, category: e.target.value})}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-                >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500, color: "#374151" }}>
-                  Imagen del Producto (opcional)
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => setEditImageFile(e.target.files[0])}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-                />
-                {editingProduct.image && (
-                  <div style={{ marginTop: "8px", fontSize: "12px", color: "#6b7280" }}>
-                    Actual: {editingProduct.image}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "8px" }}>
-                <button onClick={handleCancelEdit} style={{
-                  padding: "8px 20px", background: "#f3f4f6", color: "#374151",
-                  border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-                }}>
-                  Cancelar
-                </button>
-                <button onClick={handleUpdateProduct} style={{
-                  padding: "8px 20px", background: "#3b82f6", color: "#fff",
-                  border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-                }}>
-                  Actualizar Producto
-                </button>
+            <div style={{ width: "36px", height: "4px", background: "#e5e7eb", borderRadius: "2px", margin: "0 auto 16px" }} />
+            <h4 style={{ margin: "0 0 14px", fontSize: "16px", fontWeight: 700, color: "#111827" }}>Editar: {editingProduct.name}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <input value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})}
+                style={{ padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
+              <select value={editingProduct.category || categories[0]?.name || 'general'}
+                onChange={e => setEditingProduct({...editingProduct, category: e.target.value})}
+                style={{ padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }}>
+                {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+              </select>
+              <input type="file" accept="image/*" onChange={e => setEditImageFile(e.target.files[0])}
+                style={{ padding: "8px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px" }} />
+              {editingProduct.image && <p style={{ margin: 0, fontSize: "11px", color: "#9ca3af" }}>Actual: {editingProduct.image}</p>}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <ActionBtn onClick={handleUpdateProduct} bg="#2563eb" color="#fff">Actualizar</ActionBtn>
+                <ActionBtn onClick={() => { setEditingProduct(null); setEditImageFile(null); }} bg="#f3f4f6" color="#374151">Cancelar</ActionBtn>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 };
 
+// ─── CategoriesTab ───
 const CategoriesTab = ({ categories, onAddCategory }) => {
   const [newCategory, setNewCategory] = useState("");
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
-  const handleAddCategory = async () => {
+  const handleAdd = async () => {
     if (!newCategory.trim()) return;
-    
-    try {
-      await onAddCategory(newCategory);
-      setNewCategory("");
-      setShowAddForm(false);
-    } catch (error) {
-      console.error("Error adding category:", error);
-    }
+    try { await onAddCategory(newCategory); setNewCategory(""); setShowAdd(false); }
+    catch (e) { console.error("Error adding category:", e); }
   };
 
   return (
     <div>
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", alignItems: "center" }}>
-        <button onClick={() => setShowAddForm(!showAddForm)} style={{
-          padding: "7px 18px", background: "#8b5cf6", color: "#fff",
-          border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-        }}>
-          {showAddForm ? "Cancelar" : "Agregar Categoría"}
-        </button>
-      </div>
+      <button onClick={() => setShowAdd(!showAdd)} style={{
+        padding: "10px 16px", background: "#8b5cf6", color: "#fff",
+        border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, fontSize: "13px", marginBottom: "12px",
+      }}>
+        {showAdd ? "✕ Cancelar" : "+ Categoría"}
+      </button>
 
-      {/* Add Category Form */}
-      {showAddForm && (
-        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>Agregar Nueva Categoría</h3>
-          <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
-            <input
-              placeholder="Nombre de la categoría"
-              value={newCategory}
-              onChange={e => setNewCategory(e.target.value)}
-              style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}
-            />
-          </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button onClick={handleAddCategory} style={{
-              padding: "8px 20px", background: "#8b5cf6", color: "#fff",
-              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-            }}>
-              Agregar Categoría
-            </button>
-            <button onClick={() => {
-              setShowAddForm(false);
-              setNewCategory("");
-            }} style={{
-              padding: "8px 20px", background: "#f3f4f6", color: "#374151",
-              border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "14px"
-            }}>
-              Cancelar
-            </button>
-          </div>
+      {showAdd && (
+        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          <input placeholder="Nombre de categoría" value={newCategory} onChange={e => setNewCategory(e.target.value)}
+            style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
+          <ActionBtn onClick={handleAdd} bg="#8b5cf6" color="#fff" style={{ flex: "0 1 auto", padding: "10px 16px" }}>Agregar</ActionBtn>
         </div>
       )}
 
-      {/* Categories List */}
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-          <thead>
-            <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-              <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Nombre de Categoría</th>
-              <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Cantidad de Productos</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((category, i) => (
-              <tr key={category.id} style={{ borderBottom: i < categories.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                <td style={{ padding: "12px 16px", fontWeight: 500, color: "#374151" }}>{category.name}</td>
-                <td style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>
-                  {/* Product count would need to be calculated */}
-                  -
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {categories.map(cat => (
+          <div key={cat.id} style={{
+            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+            padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>📁 {cat.name}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
+// ─── RequestsTab ───
 const RequestsTab = ({ requests, onRequestResponse }) => {
   const [respondingTo, setRespondingTo] = useState(null);
   const [response, setResponse] = useState("");
 
-  const handleRespond = (request) => {
-    setRespondingTo(request.id);
-    setResponse("");
-  };
-
   const submitResponse = async (status) => {
     if (!respondingTo) return;
-    
-    // Use a default response if admin didn't type anything
     const finalResponse = response.trim() || (status === 'approved' ? 'Aprobado' : 'Rechazado');
-    
-    try {
-      await onRequestResponse(respondingTo, status, finalResponse);
-    } catch (error) {
-      console.error('Error in submitResponse:', error);
-    }
-    
-    setRespondingTo(null);
-    setResponse("");
+    try { await onRequestResponse(respondingTo, status, finalResponse); }
+    catch (e) { console.error('Error:', e); }
+    setRespondingTo(null); setResponse("");
   };
 
   const handleCleanup = async () => {
-    if (!confirm("¿Eliminar todas las solicitudes pendientes? Esta acción no se puede deshacer.")) return;
-    
+    if (!confirm("¿Eliminar todas las solicitudes pendientes?")) return;
     try {
-      const response = await apiFetch(`${API_BASE_URL}/admin/requests/cleanup`, {
-        method: "DELETE"
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        alert(`Se eliminaron ${data.deleted.length} solicitudes pendientes`);
-        window.location.reload(); // Refresh to update the list
-      }
-    } catch (error) {
-      console.error("Error cleaning up requests:", error);
-      alert("Error al limpiar solicitudes");
-    }
+      const res = await apiFetch(`${API_BASE_URL}/admin/requests/cleanup`, { method: "DELETE" });
+      if (res.ok) { const data = await res.json(); alert(`Se eliminaron ${data.deleted.length} solicitudes`); window.location.reload(); }
+    } catch (e) { console.error("Error:", e); alert("Error al limpiar solicitudes"); }
   };
 
-  const getRequestTypeLabel = (type) => {
-    switch(type) {
-      case 'modify': return 'Modificar pedido';
-      case 'cancel': return 'Cancelar pedido';
-      case 'add_items': return 'Agregar productos';
-      default: return type;
-    }
-  };
+  const typeLabel = (t) => ({ modify: "Modificar", cancel: "Cancelar", add_items: "Agregar" }[t] || t);
+
+  if (requests.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
+        <div style={{ fontSize: "48px", marginBottom: "8px" }}>📩</div>
+        <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>No hay solicitudes pendientes</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h3 style={{ fontSize: "18px", color: "#374151", margin: 0 }}>Solicitudes Pendientes</h3>
-        {requests.length > 0 && (
-          <button onClick={handleCleanup} style={{
-            padding: "6px 16px", background: "#ef4444", color: "#fff",
-            border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-          }}>
-            Limpiar Todo
-          </button>
-        )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <span style={{ fontSize: "13px", color: "#9ca3af" }}>{requests.length} pendientes</span>
+        <button onClick={handleCleanup} style={{
+          padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
+          border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+        }}>🗑️ Limpiar Todo</button>
       </div>
-      
-      {requests.length === 0 ? (
-        <div style={{
-          textAlign: "center", padding: "48px", background: "#f9fafb",
-          borderRadius: "12px", border: "1px solid #e5e7eb"
-        }}>
-          <p style={{ fontSize: "16px", color: "#6b7280" }}>No hay solicitudes pendientes</p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {requests.map((request) => (
-            <div key={request.id} style={{
-              background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-              padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
-            }}>
-              {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <div>
-                  <span style={{ fontWeight: 600, color: "#374151" }}>Orden #{request.order_id}</span>
-                  <span style={{ margin: "0 12px", color: "#9ca3af" }}>•</span>
-                  <span style={{ color: "#6b7280" }}>{request.user_email}</span>
-                </div>
-                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-                  {new Date(request.created_at).toLocaleString('es-MX')}
-                </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {requests.map(req => (
+          <div key={req.id} style={{
+            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+            overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{ padding: "12px 14px", background: "#f9fafb", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>Orden #{req.order_id}</span>
+                <span style={{ fontSize: "12px", color: "#9ca3af", marginLeft: "8px" }}>{req.user_email?.split("@")[0]}</span>
+              </div>
+              <span style={{ padding: "3px 8px", borderRadius: "6px", fontSize: "11px", background: "#fef3c7", color: "#92400e", fontWeight: 600 }}>
+                {typeLabel(req.request_type)}
+              </span>
+            </div>
+            <div style={{ padding: "12px 14px" }}>
+              <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>{req.message}</p>
+              <div style={{ fontSize: "11px", color: "#9ca3af", marginBottom: "10px" }}>
+                {new Date(req.created_at).toLocaleString('es-MX')}
               </div>
 
-              {/* Request Type */}
-              <div style={{ marginBottom: "8px" }}>
-                <span style={{
-                  padding: "4px 8px", borderRadius: "6px", fontSize: "12px",
-                  background: "#fef3c7", color: "#92400e", fontWeight: 500
-                }}>
-                  {getRequestTypeLabel(request.request_type)}
-                </span>
-              </div>
-
-              {/* Message */}
-              <div style={{ marginBottom: "12px" }}>
-                <p style={{ margin: "0", color: "#374151", lineHeight: "1.5" }}>
-                  {request.message}
-                </p>
-              </div>
-
-              {/* Actions */}
-              {respondingTo !== request.id && (
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button onClick={() => handleRespond(request)} style={{
-                    padding: "6px 16px", background: "#3b82f6", color: "#fff",
-                    border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                  }}>
-                    Responder
-                  </button>
-                </div>
-              )}
-
-              {/* Response Form */}
-              {respondingTo === request.id && (
-                <div style={{ marginTop: "12px", padding: "12px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
-                  <textarea
-                    value={response}
-                    onChange={(e) => setResponse(e.target.value)}
-                    placeholder="Escribe tu respuesta al cliente..."
-                    style={{
-                      width: "100%", minHeight: "80px", padding: "8px",
-                      borderRadius: "6px", border: "1px solid #d1d5db", fontSize: "14px",
-                      resize: "vertical", marginBottom: "8px"
-                    }}
-                  />
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => submitResponse('approved')} style={{
-                      padding: "6px 16px", background: "#22c55e", color: "#fff",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>
-                      Aprobar y permitir edición
-                    </button>
-                    <button onClick={() => submitResponse('rejected')} style={{
-                      padding: "6px 16px", background: "#ef4444", color: "#fff",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>
-                      Rechazar (pedido bloqueado)
-                    </button>
-                    <button onClick={() => { setRespondingTo(null); setResponse(""); }} style={{
-                      padding: "6px 16px", background: "#f3f4f6", color: "#374151",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "13px"
-                    }}>
-                      Cancelar
-                    </button>
+              {respondingTo !== req.id ? (
+                <ActionBtn onClick={() => { setRespondingTo(req.id); setResponse(""); }} bg="#eff6ff" color="#2563eb">
+                  Responder
+                </ActionBtn>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <textarea value={response} onChange={e => setResponse(e.target.value)}
+                    placeholder="Respuesta al cliente..."
+                    style={{ width: "100%", minHeight: "60px", padding: "10px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px", resize: "vertical", boxSizing: "border-box" }} />
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <ActionBtn onClick={() => submitResponse('approved')} bg="#f0fdf4" color="#15803d">✓ Aprobar</ActionBtn>
+                    <ActionBtn onClick={() => submitResponse('rejected')} bg="#fef2f2" color="#dc2626">✕ Rechazar</ActionBtn>
+                    <ActionBtn onClick={() => { setRespondingTo(null); setResponse(""); }} bg="#f3f4f6" color="#374151">Cancelar</ActionBtn>
                   </div>
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
+// ─── ShoppingListTab ───
 const ShoppingListTab = ({ orders, catalog }) => {
-  // Consolidate products from pending and in_progress orders
   const activeOrders = orders.filter(o => o.status === "pending" || o.status === "in_progress");
 
   const consolidated = useMemo(() => {
@@ -672,9 +400,7 @@ const ShoppingListTab = ({ orders, catalog }) => {
       const products = typeof order.products === "string" ? JSON.parse(order.products) : order.products;
       products.forEach(item => {
         const key = `${item.name}-${item.unit}`;
-        if (!map[key]) {
-          map[key] = { name: item.name, unit: item.unit, quantity: 0, id: item.id };
-        }
+        if (!map[key]) map[key] = { name: item.name, unit: item.unit, quantity: 0, id: item.id };
         map[key].quantity += item.quantity;
       });
     });
@@ -682,10 +408,7 @@ const ShoppingListTab = ({ orders, catalog }) => {
   }, [activeOrders]);
 
   const [checked, setChecked] = useState({});
-
-  const toggleCheck = (key) => {
-    setChecked(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggleCheck = (key) => setChecked(prev => ({ ...prev, [key]: !prev[key] }));
 
   const getProductImage = (item) => {
     const found = catalog.find(p => p.id === item.id || p.name === item.name);
@@ -695,49 +418,51 @@ const ShoppingListTab = ({ orders, catalog }) => {
 
   if (activeOrders.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "40px 20px", color: "#6b7280" }}>
-        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🛒</div>
-        <p>No hay órdenes pendientes o en progreso.</p>
+      <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
+        <div style={{ fontSize: "48px", marginBottom: "8px" }}>🛒</div>
+        <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>No hay órdenes activas</p>
       </div>
     );
   }
 
   return (
     <div>
-      <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
-        Lista consolidada de {activeOrders.length} {activeOrders.length === 1 ? "orden" : "órdenes"} activas ({consolidated.length} productos).
+      <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "12px" }}>
+        {activeOrders.length} {activeOrders.length === 1 ? "orden activa" : "órdenes activas"} · {consolidated.length} productos
       </p>
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-        {consolidated.map((item) => {
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        {consolidated.map(item => {
           const key = `${item.name}-${item.unit}`;
           const isDone = checked[key];
           return (
             <div key={key} onClick={() => toggleCheck(key)} style={{
-              display: "flex", alignItems: "center", gap: "12px",
-              padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
-              cursor: "pointer", opacity: isDone ? 0.4 : 1,
-              textDecoration: isDone ? "line-through" : "none",
-              transition: "opacity 0.2s",
+              display: "flex", alignItems: "center", gap: "10px",
+              padding: "10px 14px", background: "#fff", borderRadius: "12px",
+              border: "1px solid #e5e7eb", cursor: "pointer",
+              opacity: isDone ? 0.4 : 1, transition: "opacity 0.2s",
+              WebkitTapHighlightColor: "transparent",
             }}>
               <div style={{
-                width: "24px", height: "24px", borderRadius: "6px",
+                width: "22px", height: "22px", borderRadius: "6px", flexShrink: 0,
                 border: isDone ? "none" : "2px solid #d1d5db",
                 background: isDone ? "#15803d" : "#fff",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0,
               }}>
-                {isDone && <span style={{ color: "#fff", fontSize: "14px" }}>✓</span>}
+                {isDone && <span style={{ color: "#fff", fontSize: "13px" }}>✓</span>}
               </div>
               <img src={getProductImage(item)} alt={item.name}
-                style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: "15px", fontWeight: 600, color: "#374151" }}>
+                style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+              <span style={{
+                flex: 1, fontSize: "14px", fontWeight: 600, color: "#374151",
+                textDecoration: isDone ? "line-through" : "none",
+              }}>
                 {item.name}
               </span>
               <span style={{
-                fontSize: "15px", fontWeight: 700, color: "#15803d",
-                background: "#f0fdf4", padding: "4px 12px", borderRadius: "8px",
+                fontSize: "14px", fontWeight: 700, color: "#15803d",
+                background: "#f0fdf4", padding: "4px 10px", borderRadius: "8px",
               }}>
-                {item.quantity} {item.unit === "kg" ? "kg" : "pzs"}
+                {item.quantity} {item.unit === "kg" ? "kg" : "pz"}
               </span>
             </div>
           );
@@ -747,6 +472,7 @@ const ShoppingListTab = ({ orders, catalog }) => {
   );
 };
 
+// ─── Main Admin Component ───
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
@@ -759,263 +485,113 @@ const Admin = () => {
   const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
 
-  const fetchOrders = async () => {
-    try {
-      const response = await apiFetch(`${API_BASE_URL}/admin/orders`);
-      const data = await response.json();
-      setOrders(data);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const res = await apiFetch(`${API_BASE_URL}/admin/users`);
-      setUsers(await res.json());
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await apiFetch(`${API_BASE_URL}/categories`);
-      setCategories(await res.json());
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
-
-  const fetchRequests = async () => {
-    try {
-      const res = await apiFetch(`${API_BASE_URL}/admin/requests`);
-      const data = await res.json();
-      setRequests(data.filter(req => req.status === 'pending'));
-    } catch (error) {
-      console.error("Error fetching requests:", error);
-    }
-  };
-
-  const fetchInvitations = async () => {
-    try {
-      const res = await apiFetch(`${API_BASE_URL}/admin/invitations`);
-      setInvitations(await res.json());
-    } catch (error) {
-      console.error("Error fetching invitations:", error);
-    }
-  };
+  const fetchOrders = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/orders`); setOrders(await r.json()); } catch (e) { console.error("Error:", e); } };
+  const fetchUsers = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/users`); setUsers(await r.json()); } catch (e) { console.error("Error:", e); } };
+  const fetchCategories = async () => { try { const r = await apiFetch(`${API_BASE_URL}/categories`); setCategories(await r.json()); } catch (e) { console.error("Error:", e); } };
+  const fetchRequests = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/requests`); const d = await r.json(); setRequests(d.filter(req => req.status === 'pending')); } catch (e) { console.error("Error:", e); } };
+  const fetchInvitations = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/invitations`); setInvitations(await r.json()); } catch (e) { console.error("Error:", e); } };
 
   const refreshCatalog = async () => {
     try {
-      const res = await apiFetch(`${API_BASE_URL}/products?all=true`);
-      const data = await res.json();
+      const r = await apiFetch(`${API_BASE_URL}/products?all=true`);
+      const data = await r.json();
       setCatalog(data);
       const initial = {};
       data.forEach(p => { initial[p.id] = { price_piece: p.price_piece, price_kg: p.price_kg }; });
       setEditingPrices(initial);
-    } catch (error) {
-      console.error("Error fetching catalog:", error);
-    }
+    } catch (e) { console.error("Error:", e); }
   };
 
   const handleCreateInvitation = async (multiUse = false) => {
-    try {
-      await apiFetch(`${API_BASE_URL}/admin/invitations`, {
-        method: "POST",
-        body: JSON.stringify({ multi_use: multiUse }),
-      });
-      await fetchInvitations();
-    } catch (error) {
-      console.error("Error creating invitation:", error);
-    }
+    try { await apiFetch(`${API_BASE_URL}/admin/invitations`, { method: "POST", body: JSON.stringify({ multi_use: multiUse }) }); await fetchInvitations(); }
+    catch (e) { console.error("Error:", e); }
   };
 
   const handleDeactivateInvitation = async (id) => {
-    try {
-      await apiFetch(`${API_BASE_URL}/admin/invitations/${id}/deactivate`, { method: "PUT" });
-      await fetchInvitations();
-    } catch (error) {
-      console.error("Error deactivating invitation:", error);
-    }
+    try { await apiFetch(`${API_BASE_URL}/admin/invitations/${id}/deactivate`, { method: "PUT" }); await fetchInvitations(); }
+    catch (e) { console.error("Error:", e); }
   };
 
   useEffect(() => {
-    fetchOrders();
-    fetchUsers();
-    fetchCategories();
-    fetchRequests();
-    fetchInvitations();
-    refreshCatalog();
-
-    // Poll for new orders and requests every 3 minutes
-    const interval = setInterval(() => {
-      fetchOrders();
-      fetchRequests();
-    }, 3 * 60 * 1000);
+    fetchOrders(); fetchUsers(); fetchCategories(); fetchRequests(); fetchInvitations(); refreshCatalog();
+    const interval = setInterval(() => { fetchOrders(); fetchRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
   const handleApprove = async (uid, approved) => {
-    await apiFetch(`${API_BASE_URL}/admin/users/${uid}/approve`, {
-      method: "PATCH",
-      body: JSON.stringify({ approved }),
-    });
+    await apiFetch(`${API_BASE_URL}/admin/users/${uid}/approve`, { method: "PATCH", body: JSON.stringify({ approved }) });
     await fetchUsers();
   };
 
   const handleDeliverOrder = async (orderId) => {
-    if (confirm("¿Estás seguro de que quieres marcar este pedido como entregado? Esta acción no se puede deshacer.")) {
-      try {
-        await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
-          method: "PUT",
-          body: JSON.stringify({ status: 'delivered' }),
-        });
-        await fetchOrders();
-      } catch (error) {
-        console.error("Error delivering order:", error);
-      }
+    if (confirm("¿Marcar como entregado?")) {
+      try { await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, { method: "PUT", body: JSON.stringify({ status: 'delivered' }) }); await fetchOrders(); }
+      catch (e) { console.error("Error:", e); }
     }
   };
 
   const handleStatusChange = async (orderId, status) => {
-    try {
-      await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, {
-        method: "PUT",
-        body: JSON.stringify({ status }),
-      });
-      await fetchOrders();
-    } catch (error) {
-      console.error("Error updating order status:", error);
-    }
+    try { await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, { method: "PUT", body: JSON.stringify({ status }) }); await fetchOrders(); }
+    catch (e) { console.error("Error:", e); }
   };
 
   const handleRequestResponse = async (requestId, status, adminResponse) => {
     try {
-      const response = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
-        method: "PUT",
-        body: JSON.stringify({ status, admin_response: adminResponse }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to respond to request: ${errorText}`);
-      }
-      
+      const r = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, { method: "PUT", body: JSON.stringify({ status, admin_response: adminResponse }) });
+      if (!r.ok) throw new Error(await r.text());
       setRequests(prev => prev.filter(req => req.id !== requestId));
       await fetchOrders();
-    } catch (error) {
-      console.error("Error responding to request:", error);
-    }
+    } catch (e) { console.error("Error:", e); }
   };
 
-  const handlePriceChange = (id, field, value) => {
-    setEditingPrices(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
-  };
+  const handlePriceChange = (id, field, value) => { setEditingPrices(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } })); };
 
-  const handleSavePrice = async (id) => {
-    await apiFetch(`${API_BASE_URL}/admin/products/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(editingPrices[id]),
-    });
-    await refreshCatalog();
-  };
+  const handleSavePrice = async (id) => { await apiFetch(`${API_BASE_URL}/admin/products/${id}`, { method: "PUT", body: JSON.stringify(editingPrices[id]) }); await refreshCatalog(); };
 
   const handleSaveAll = async () => {
-    const products = Object.entries(editingPrices).map(([id, prices]) => ({
-      id: Number(id), ...prices,
-    }));
-    await apiFetch(`${API_BASE_URL}/admin/products/bulk`, {
-      method: "POST",
-      body: JSON.stringify({ products }),
-    });
+    const products = Object.entries(editingPrices).map(([id, prices]) => ({ id: Number(id), ...prices }));
+    await apiFetch(`${API_BASE_URL}/admin/products/bulk`, { method: "POST", body: JSON.stringify({ products }) });
     await refreshCatalog();
   };
 
   const handleCsvUpload = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
+    const formData = new FormData(); formData.append("file", file);
     const token = localStorage.getItem("local_token") || (auth.currentUser && await auth.currentUser.getIdToken());
     if (!token) throw new Error("Not authenticated");
-    const res = await fetch(`${API_BASE_URL}/admin/products/csv`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    const result = await res.json();
-    await refreshCatalog();
-    alert(`✅ ${result.updated} productos actualizados`);
+    const res = await fetch(`${API_BASE_URL}/admin/products/csv`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+    const result = await res.json(); await refreshCatalog(); alert(`✅ ${result.updated} productos actualizados`);
   };
 
   const handleAddProduct = async (productData, imageFile) => {
     const formData = new FormData();
-    formData.append("name", productData.name);
-    formData.append("price_piece", productData.price_piece);
-    formData.append("price_kg", productData.price_kg);
-    formData.append("category", productData.category);
+    formData.append("name", productData.name); formData.append("price_piece", productData.price_piece);
+    formData.append("price_kg", productData.price_kg); formData.append("category", productData.category);
     formData.append("sell_by", productData.sell_by || "both");
-    if (imageFile) {
-      formData.append("image", imageFile);
-    }
-
+    if (imageFile) formData.append("image", imageFile);
     const token = localStorage.getItem("local_token") || (auth.currentUser && await auth.currentUser.getIdToken());
     if (!token) throw new Error("Not authenticated");
-    const res = await fetch(`${API_BASE_URL}/admin/products`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (res.ok) {
-      await refreshCatalog();
-    } else {
-      throw new Error("Failed to add product");
-    }
+    const res = await fetch(`${API_BASE_URL}/admin/products`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+    if (res.ok) await refreshCatalog(); else throw new Error("Failed to add product");
   };
 
-  const handleDeleteProduct = async (productId) => {
-    await apiFetch(`${API_BASE_URL}/admin/products/${productId}`, {
-      method: "DELETE",
-    });
-    await refreshCatalog();
-  };
+  const handleDeleteProduct = async (productId) => { await apiFetch(`${API_BASE_URL}/admin/products/${productId}`, { method: "DELETE" }); await refreshCatalog(); };
 
   const handleToggleAvailable = async (productId, available) => {
-    await apiFetch(`${API_BASE_URL}/admin/products/${productId}/available`, {
-      method: "PUT",
-      body: JSON.stringify({ available }),
-    });
+    await apiFetch(`${API_BASE_URL}/admin/products/${productId}/available`, { method: "PUT", body: JSON.stringify({ available }) });
     setCatalog(prev => prev.map(p => p.id === productId ? { ...p, available } : p));
   };
 
   const handleUpdateProduct = async (productId, productData, imageFile) => {
-    const formData = new FormData();
-    formData.append("name", productData.name);
-    formData.append("category", productData.category);
-    if (imageFile) {
-      formData.append("image", imageFile);
-    }
-
+    const formData = new FormData(); formData.append("name", productData.name); formData.append("category", productData.category);
+    if (imageFile) formData.append("image", imageFile);
     const token = localStorage.getItem("local_token") || (auth.currentUser && await auth.currentUser.getIdToken());
     if (!token) throw new Error("Not authenticated");
-    const res = await fetch(`${API_BASE_URL}/admin/products/${productId}/details`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (res.ok) {
-      await refreshCatalog();
-    } else {
-      throw new Error("Failed to update product");
-    }
+    const res = await fetch(`${API_BASE_URL}/admin/products/${productId}/details`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: formData });
+    if (res.ok) await refreshCatalog(); else throw new Error("Failed to update product");
   };
 
   const handleAddCategory = async (categoryName) => {
-    await apiFetch(`${API_BASE_URL}/admin/categories`, {
-      method: "POST",
-      body: JSON.stringify({ name: categoryName }),
-    });
+    await apiFetch(`${API_BASE_URL}/admin/categories`, { method: "POST", body: JSON.stringify({ name: categoryName }) });
     await fetchCategories();
   };
 
@@ -1028,37 +604,23 @@ const Admin = () => {
     const uniqueUsers = new Set(orders.map(o => o.user_email)).size;
     const totalItems = orders.reduce((acc, o) => acc + (o.products?.length || 0), 0);
     const revenue = catalog.length
-      ? orders.filter(o => o.status !== "cancelled")
-          .reduce((acc, o) => acc + calcOrderTotal(o.products, catalog), 0)
+      ? orders.filter(o => o.status !== "cancelled").reduce((acc, o) => acc + calcOrderTotal(o.products, catalog), 0)
       : null;
     return { total, pending, inProgress, delivered, uniqueUsers, totalItems, revenue };
   }, [orders, catalog]);
 
-  // Top products chart data
   const topProducts = useMemo(() => {
     const counts = {};
-    orders.forEach(o => {
-      o.products?.forEach(p => {
-        counts[p.name] = (counts[p.name] || 0) + 1;
-      });
-    });
-    return Object.entries(counts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+    orders.forEach(o => { o.products?.forEach(p => { counts[p.name] = (counts[p.name] || 0) + 1; }); });
+    return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 8);
   }, [orders]);
 
-  // Orders per user chart data
   const ordersPerUser = useMemo(() => {
     const counts = {};
-    orders.forEach(o => {
-      const email = o.user_email?.split("@")[0] || o.uid;
-      counts[email] = (counts[email] || 0) + 1;
-    });
+    orders.forEach(o => { const email = o.user_email?.split("@")[0] || o.uid; counts[email] = (counts[email] || 0) + 1; });
     return Object.entries(counts).map(([name, count]) => ({ name, count }));
   }, [orders]);
 
-  // Filtered orders
   const uniqueUsers = useMemo(() => [...new Set(orders.map(o => o.user_email))], [orders]);
   const filteredOrders = useMemo(() => orders.filter(o => {
     const status = o.status || "pending";
@@ -1070,63 +632,70 @@ const Admin = () => {
     return statusMatch && userMatch;
   }), [orders, filterStatus, filterUser]);
 
-  // Group filtered orders by user
   const ordersByUser = useMemo(() => {
     const groups = {};
-    filteredOrders.forEach(o => {
-      const key = o.user_email || o.uid;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(o);
-    });
+    filteredOrders.forEach(o => { const key = o.user_email || o.uid; if (!groups[key]) groups[key] = []; groups[key].push(o); });
     return groups;
   }, [filteredOrders]);
 
   const CHART_COLORS = ["#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899"];
 
   return (
-    <div style={{ maxWidth: "960px", margin: "0 auto", padding: "24px 16px" }}>
-      <h2 style={{ marginBottom: "20px" }}>Panel de Administración</h2>
+    <div style={{ padding: "16px 16px 120px", maxWidth: "600px", margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "12px" }}>
+        <h2 style={{ margin: "0 0 4px", color: "#111827", fontSize: "22px", fontWeight: 700 }}>
+          Panel Admin
+        </h2>
+        <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af" }}>
+          Gestiona tu tienda
+        </p>
+      </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: "8px 20px", borderRadius: "8px", border: "none", cursor: "pointer",
-            fontWeight: 600, fontSize: "14px",
-            background: tab === t ? "#3b82f6" : "#f3f4f6",
-            color: tab === t ? "#fff" : "#374151",
-          }}>{TAB_DISPLAY_NAMES[t]}</button>
+      {/* Scrollable tabs */}
+      <div style={{
+        display: "flex", gap: "6px", marginBottom: "16px",
+        overflowX: "auto", WebkitOverflowScrolling: "touch",
+        paddingBottom: "4px", msOverflowStyle: "none", scrollbarWidth: "none",
+      }}>
+        {TAB_ITEMS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
+            padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer",
+            fontWeight: 600, fontSize: "12px", whiteSpace: "nowrap",
+            background: tab === t.key ? "#111827" : "#f3f4f6",
+            color: tab === t.key ? "#fff" : "#6b7280",
+            WebkitTapHighlightColor: "transparent",
+            transition: "all .15s",
+          }}>
+            {t.icon} {t.label}
+          </button>
         ))}
       </div>
 
-      {/* DASHBOARD TAB */}
+      {/* ─── DASHBOARD ─── */}
       {tab === "Dashboard" && (
         <div>
-          {/* Stat cards */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
-            <StatCard label="Total Órdenes" value={stats.total} color="#3b82f6" />
-            <StatCard label="Pendientes" value={stats.pending} color="#f59e0b" />
-            <StatCard label="En Progreso" value={stats.inProgress} color="#3b82f6" />
-            <StatCard label="Entregadas" value={stats.delivered} color="#22c55e" />
-            <StatCard label="Clientes" value={stats.uniqueUsers} color="#8b5cf6" />
-            <StatCard label="Total Productos" value={stats.totalItems} color="#06b6d4" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
+            <StatCard label="Total Órdenes" value={stats.total} color="#2563eb" icon="📋" />
+            <StatCard label="Pendientes" value={stats.pending} color="#d97706" icon="🕐" />
+            <StatCard label="En Progreso" value={stats.inProgress} color="#2563eb" icon="📦" />
+            <StatCard label="Entregadas" value={stats.delivered} color="#16a34a" icon="✅" />
+            <StatCard label="Clientes" value={stats.uniqueUsers} color="#7c3aed" icon="👥" />
+            <StatCard label="Productos" value={stats.totalItems} color="#0891b2" icon="🏷️" />
             {stats.revenue !== null && (
-              <StatCard label="Ingreso (est.)" value={formatMXN(stats.revenue)} color="#10b981" />
+              <StatCard label="Ingreso (est.)" value={formatMXN(stats.revenue)} color="#15803d" icon="💰" />
             )}
           </div>
 
           {/* Charts */}
-          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-            <div style={{
-              flex: 1, minWidth: "280px", background: "#fff", border: "1px solid #e5e7eb",
-              borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
-            }}>
-              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Productos Más Pedidos</h3>
-              {topProducts.length === 0 ? <p style={{ color: "#9ca3af" }}>Sin datos aún</p> : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={topProducts} layout="vertical" margin={{ left: 10 }}>
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <h4 style={{ margin: "0 0 12px", fontSize: "14px", fontWeight: 700, color: "#374151" }}>Productos Más Pedidos</h4>
+              {topProducts.length === 0 ? <p style={{ color: "#9ca3af", fontSize: "13px" }}>Sin datos</p> : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={topProducts} layout="vertical" margin={{ left: 0 }}>
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10 }} />
                     <Tooltip />
                     <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                       {topProducts.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
@@ -1135,17 +704,13 @@ const Admin = () => {
                 </ResponsiveContainer>
               )}
             </div>
-
-            <div style={{
-              flex: 1, minWidth: "280px", background: "#fff", border: "1px solid #e5e7eb",
-              borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
-            }}>
-              <h3 style={{ marginBottom: "16px", fontSize: "15px", color: "#374151" }}>Órdenes por Cliente</h3>
-              {ordersPerUser.length === 0 ? <p style={{ color: "#9ca3af" }}>Sin datos aún</p> : (
-                <ResponsiveContainer width="100%" height={220}>
+            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <h4 style={{ margin: "0 0 12px", fontSize: "14px", fontWeight: 700, color: "#374151" }}>Órdenes por Cliente</h4>
+              {ordersPerUser.length === 0 ? <p style={{ color: "#9ca3af", fontSize: "13px" }}>Sin datos</p> : (
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={ordersPerUser} margin={{ left: 0 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                       {ordersPerUser.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
@@ -1158,123 +723,92 @@ const Admin = () => {
         </div>
       )}
 
-      {/* ORDERS TAB */}
+      {/* ─── ORDERS ─── */}
       {tab === "Orders" && (
         <div>
-          {/* Filters */}
-          <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
+              style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px", background: "#f9fafb" }}>
               <option value="not_delivered">No entregadas</option>
-              <option value="all">Todos los estados</option>
+              <option value="all">Todos</option>
               <option value="pending">Pendientes</option>
               <option value="in_progress">En Progreso</option>
               <option value="delivered">Entregadas</option>
             </select>
             <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
-              style={{ padding: "7px 12px", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "14px" }}>
-              <option value="all">Todos los clientes</option>
-              {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
+              style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px", background: "#f9fafb" }}>
+              <option value="all">Todos</option>
+              {uniqueUsers.map(u => <option key={u} value={u}>{u?.split("@")[0]}</option>)}
             </select>
           </div>
 
-          {/* Orders grouped by user */}
           {Object.keys(ordersByUser).length === 0 ? (
-            <p style={{ color: "#9ca3af" }}>No hay órdenes que coincidan con el filtro.</p>
+            <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
+              <div style={{ fontSize: "48px", marginBottom: "8px" }}>📋</div>
+              <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>Sin órdenes</p>
+            </div>
           ) : (
             Object.entries(ordersByUser).map(([email, userOrders]) => (
-              <div key={email} style={{ marginBottom: "24px" }}>
-                <h3 style={{ fontSize: "15px", color: "#6b7280", marginBottom: "10px" }}>
-                  {email} — {userOrders.length} {userOrders.length > 1 ? "órdenes" : "orden"}
-                </h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div key={email} style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "12px", color: "#9ca3af", fontWeight: 600, marginBottom: "8px", letterSpacing: "0.3px" }}>
+                  👤 {email?.split("@")[0]} — {userOrders.length} {userOrders.length > 1 ? "órdenes" : "orden"}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {userOrders.map(order => (
                     <div key={order.id} style={{
-                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-                      padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
+                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+                      overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
                     }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                        <span style={{ fontWeight: 600, color: "#374151" }}>Orden #{order.id}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {/* Order header */}
+                      <div style={{
+                        padding: "10px 14px", background: "#f9fafb", borderBottom: "1px solid #f3f4f6",
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>#{order.id}</span>
                           {catalog.length > 0 && (
-                            <span style={{ fontWeight: 700, color: "#22c55e" }}>
+                            <span style={{ fontWeight: 700, color: "#15803d", fontSize: "13px" }}>
                               {formatMXN(calcOrderTotal(order.products, catalog))}
                             </span>
                           )}
-                          <span style={{
-                            padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 600,
-                            backgroundColor: order.status === 'delivered' ? '#dcfce7' : 
-                                           order.status === 'in_progress' ? '#dbeafe' : '#fef3c7',
-                            color: order.status === 'delivered' ? '#166534' : 
-                                  order.status === 'in_progress' ? '#1d4ed8' : '#92400e'
-                          }}>
-                            {order.status === 'delivered' ? 'Entregada' : 
-                             order.status === 'in_progress' ? 'En Progreso' : 'Pendiente'}
-                          </span>
-                          <div style={{ display: "flex", gap: "6px" }}>
-                            {order.status === 'delivered' ? (
-                              <button 
-                                onClick={() => handleStatusChange(order.id, 'pending')}
-                                style={{
-                                  padding: "4px 8px", 
-                                  background: "#6b7280", 
-                                  color: "#fff",
-                                  border: "none", 
-                                  borderRadius: "6px", 
-                                  fontSize: "12px",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                Reiniciar
-                              </button>
-                            ) : (
-                              <>
-                                {order.status === 'pending' && (
-                                  <button 
-                                    onClick={() => handleStatusChange(order.id, 'in_progress')}
-                                    style={{
-                                      padding: "4px 8px", 
-                                      background: "#3b82f6", 
-                                      color: "#fff",
-                                      border: "none", 
-                                      borderRadius: "6px", 
-                                      fontSize: "12px",
-                                      cursor: "pointer"
-                                    }}
-                                  >
-                                    Iniciar Progreso
-                                  </button>
-                                )}
-                                {(order.status === 'pending' || order.status === 'in_progress') && (
-                                  <button 
-                                    onClick={() => handleDeliverOrder(order.id)}
-                                    style={{
-                                      padding: "4px 8px", 
-                                      background: "#22c55e", 
-                                      color: "#fff",
-                                      border: "none", 
-                                      borderRadius: "6px", 
-                                      fontSize: "12px",
-                                      cursor: "pointer"
-                                    }}
-                                  >
-                                    Entregar
-                                  </button>
-                                )}
-                              </>
-                            )}
-                          </div>
                         </div>
+                        <Badge status={order.status} />
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+
+                      <div style={{ padding: "10px 14px" }}>
+                        {/* Products */}
                         {order.products.map((p, i) => (
-                          <span key={i} style={{
-                            background: "#f9fafb", border: "1px solid #e5e7eb",
-                            borderRadius: "6px", padding: "4px 10px", fontSize: "13px", color: "#374151"
+                          <div key={i} style={{
+                            display: "flex", alignItems: "center", gap: "8px",
+                            padding: "4px 0", fontSize: "13px", color: "#374151",
+                            borderBottom: i < order.products.length - 1 ? "1px solid #f3f4f6" : "none",
                           }}>
-                            {p.name} — {p.quantity} {p.unit}
-                          </span>
+                            <span style={{ flex: 1 }}>{p.name}</span>
+                            <span style={{ color: "#6b7280", fontSize: "12px" }}>{p.quantity} {p.unit === "pieces" ? "pz" : "kg"}</span>
+                          </div>
                         ))}
+
+                        {/* Status actions */}
+                        <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+                          {order.status === 'delivered' ? (
+                            <ActionBtn onClick={() => handleStatusChange(order.id, 'pending')} bg="#f3f4f6" color="#6b7280">
+                              ↩️ Reiniciar
+                            </ActionBtn>
+                          ) : (
+                            <>
+                              {order.status === 'pending' && (
+                                <ActionBtn onClick={() => handleStatusChange(order.id, 'in_progress')} bg="#eff6ff" color="#2563eb">
+                                  📦 Progreso
+                                </ActionBtn>
+                              )}
+                              {(order.status === 'pending' || order.status === 'in_progress') && (
+                                <ActionBtn onClick={() => handleDeliverOrder(order.id)} bg="#f0fdf4" color="#15803d">
+                                  ✅ Entregar
+                                </ActionBtn>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1284,202 +818,148 @@ const Admin = () => {
           )}
         </div>
       )}
-      {/* SHOPPING LIST TAB */}
-      {tab === "ShoppingList" && (
-        <ShoppingListTab orders={orders} catalog={catalog} />
-      )}
-      {/* USERS TAB */}
+
+      {/* ─── SHOPPING LIST ─── */}
+      {tab === "ShoppingList" && <ShoppingListTab orders={orders} catalog={catalog} />}
+
+      {/* ─── USERS ─── */}
       {tab === "Users" && (
         <div>
-          <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
-            Aprueba o rechaza el acceso de cada usuario.
-          </p>
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-              <thead>
-                <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Email</th>
-                  <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Estado</th>
-                  <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u, i) => (
-                  <tr key={u.uid} style={{ borderBottom: i < users.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                    <td style={{ padding: "12px 16px", color: "#374151" }}>
-                      {u.email}
-                      {u.is_admin && <span style={{ marginLeft: "8px", fontSize: "11px", background: "#ede9fe", color: "#7c3aed", padding: "2px 8px", borderRadius: "999px", fontWeight: 600 }}>Admin</span>}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                      {u.is_approved
-                        ? <span style={{ color: "#22c55e", fontWeight: 600 }}>✓ Aprobado</span>
-                        : <span style={{ color: "#f59e0b", fontWeight: 600 }}>⏳ Pendiente</span>}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "center", display: "flex", gap: "8px", justifyContent: "center" }}>
-                      {!u.is_approved && (
-                        <button onClick={() => handleApprove(u.uid, true)} style={{
-                          padding: "5px 14px", background: "#22c55e", color: "#fff",
-                          border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 600
-                        }}>Aprobar</button>
-                      )}
-                      {u.is_approved && !u.is_admin && (
-                        <button onClick={() => handleApprove(u.uid, false)} style={{
-                          padding: "5px 14px", background: "#fee2e2", color: "#ef4444",
-                          border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 600
-                        }}>Revocar</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* PRICES TAB */}
-      {tab === "Prices" && (
-        <PricesTab
-          catalog={catalog}
-          editingPrices={editingPrices}
-          onPriceChange={handlePriceChange}
-          onSaveOne={handleSavePrice}
-          onSaveAll={handleSaveAll}
-          onCsvUpload={handleCsvUpload}
-          onAddProduct={handleAddProduct}
-          onDeleteProduct={handleDeleteProduct}
-          onToggleAvailable={handleToggleAvailable}
-          categories={categories}
-          onUpdateProduct={handleUpdateProduct}
-        />
-      )}
-
-      {/* CATEGORIES TAB */}
-      {tab === "Categories" && (
-        <CategoriesTab
-          categories={categories}
-          onAddCategory={handleAddCategory}
-        />
-      )}
-
-      {/* REQUESTS TAB */}
-      {tab === "Requests" && (
-        <RequestsTab
-          requests={requests}
-          onRequestResponse={handleRequestResponse}
-        />
-      )}
-
-      {/* INVITATIONS TAB */}
-      {tab === "Invitations" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
-            <h3 style={{ fontSize: "18px", color: "#374151", margin: 0 }}>Links de Invitación</h3>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={() => handleCreateInvitation(false)} style={{
-                padding: "8px 16px", background: "#8b5cf6", color: "#fff",
-                border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "13px"
-              }}>
-                Invitación Individual
-              </button>
-              <button onClick={() => handleCreateInvitation(true)} style={{
-                padding: "8px 16px", background: "#15803d", color: "#fff",
-                border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: 600, fontSize: "13px"
-              }}>
-                Invitación Multi-uso
-              </button>
+          {/* Invitations section (first for visibility) */}
+          <div style={{ marginBottom: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+              <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#111827" }}>🔗 Invitaciones</h4>
             </div>
-          </div>
-
-          <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "16px" }}>
-            Las invitaciones individuales expiran en 7 días y son de un solo uso. Las multi-uso no expiran y permiten registros ilimitados hasta que las desactives.
-          </p>
-
-          {invitations.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px", background: "#f9fafb", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-              <p style={{ fontSize: "16px", color: "#6b7280" }}>No hay invitaciones creadas</p>
+            <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+              <ActionBtn onClick={() => handleCreateInvitation(false)} bg="#ede9fe" color="#7c3aed">
+                + Individual
+              </ActionBtn>
+              <ActionBtn onClick={() => handleCreateInvitation(true)} bg="#f0fdf4" color="#15803d">
+                + Multi-uso
+              </ActionBtn>
             </div>
-          ) : (
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-                <thead>
-                  <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280" }}>Link</th>
-                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Tipo</th>
-                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Estado</th>
-                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Creado</th>
-                    <th style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280" }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invitations.map((inv, i) => {
-                    const isDeactivated = inv.is_active === false;
-                    const isUsed = !inv.multi_use && !!inv.used_by;
-                    const isExpired = !isDeactivated && !isUsed && inv.expires_at && new Date(inv.expires_at) < new Date();
-                    const isAvailable = !isDeactivated && !isUsed && !isExpired;
-                    const link = `${window.location.origin}/register/${inv.code}`;
-                    return (
-                      <tr key={inv.id} style={{ borderBottom: i < invitations.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                        <td style={{ padding: "12px 16px" }}>
-                          {isAvailable ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <input readOnly value={link} style={{
-                                flex: 1, padding: "6px 10px", borderRadius: "6px", border: "1px solid #d1d5db",
-                                fontSize: "12px", color: "#374151", background: "#f9fafb"
-                              }} />
-                              <button onClick={() => { navigator.clipboard.writeText(link); }} style={{
-                                padding: "6px 12px", background: "#3b82f6", color: "#fff",
-                                border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap"
-                              }}>
-                                Copiar
-                              </button>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: "12px", color: "#9ca3af" }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+            <p style={{ color: "#9ca3af", fontSize: "11px", marginBottom: "10px" }}>
+              Individuales: 7 días, un solo uso. Multi-uso: sin expiración.
+            </p>
+
+            {invitations.length === 0 ? (
+              <p style={{ textAlign: "center", padding: "20px", color: "#d1d5db", fontSize: "13px" }}>No hay invitaciones</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {invitations.map(inv => {
+                  const isDeactivated = inv.is_active === false;
+                  const isUsed = !inv.multi_use && !!inv.used_by;
+                  const isExpired = !isDeactivated && !isUsed && inv.expires_at && new Date(inv.expires_at) < new Date();
+                  const isAvailable = !isDeactivated && !isUsed && !isExpired;
+                  const link = `${window.location.origin}/register/${inv.code}`;
+
+                  let statusLabel, statusBg, statusColor;
+                  if (isDeactivated) { statusLabel = "Desactivado"; statusBg = "#f3f4f6"; statusColor = "#6b7280"; }
+                  else if (isUsed) { statusLabel = "Usado"; statusBg = "#dcfce7"; statusColor = "#166534"; }
+                  else if (isExpired) { statusLabel = "Expirado"; statusBg = "#fef2f2"; statusColor = "#dc2626"; }
+                  else { statusLabel = "Activo"; statusBg = "#dbeafe"; statusColor = "#1d4ed8"; }
+
+                  return (
+                    <div key={inv.id} style={{
+                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+                      padding: "10px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isAvailable ? "8px" : "0" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <span style={{
-                            padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600,
+                            padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600,
                             background: inv.multi_use ? "#f0fdf4" : "#f3f4f6",
                             color: inv.multi_use ? "#15803d" : "#6b7280",
                           }}>
                             {inv.multi_use ? "Multi-uso" : "Individual"}
                           </span>
-                        </td>
-                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                          {isDeactivated ? (
-                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>Desactivado</span>
-                          ) : isUsed ? (
-                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dcfce7", color: "#166534" }}>Usado</span>
-                          ) : isExpired ? (
-                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#fef2f2", color: "#dc2626" }}>Expirado</span>
-                          ) : (
-                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, background: "#dbeafe", color: "#1d4ed8" }}>Activo</span>
-                          )}
-                        </td>
-                        <td style={{ padding: "12px 16px", textAlign: "center", color: "#6b7280", fontSize: "13px" }}>
-                          {new Date(inv.created_at).toLocaleDateString()}
-                        </td>
-                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                          {isAvailable && (
-                            <button onClick={() => handleDeactivateInvitation(inv.id)} style={{
-                              padding: "4px 12px", background: "#fee2e2", color: "#ef4444",
-                              border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px"
-                            }}>
-                              Desactivar
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <span style={{ padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, background: statusBg, color: statusColor }}>
+                            {statusLabel}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                          {new Date(inv.created_at).toLocaleDateString("es-MX")}
+                        </span>
+                      </div>
+                      {isAvailable && (
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <input readOnly value={link} style={{
+                            flex: 1, padding: "8px 10px", borderRadius: "8px", border: "1.5px solid #e5e7eb",
+                            fontSize: "11px", color: "#374151", background: "#f9fafb",
+                          }} />
+                          <button onClick={() => navigator.clipboard.writeText(link)} style={{
+                            padding: "8px 12px", background: "#eff6ff", color: "#2563eb",
+                            border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                            WebkitTapHighlightColor: "transparent",
+                          }}>Copiar</button>
+                          <button onClick={() => handleDeactivateInvitation(inv.id)} style={{
+                            padding: "8px 12px", background: "#fef2f2", color: "#dc2626",
+                            border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                            WebkitTapHighlightColor: "transparent",
+                          }}>✕</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Users list */}
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+            <h4 style={{ margin: "0 0 10px", fontSize: "15px", fontWeight: 700, color: "#111827" }}>👥 Usuarios Registrados</h4>
+            <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "10px" }}>
+              Aprueba o rechaza el acceso de cada usuario.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {users.map(u => (
+                <div key={u.uid} style={{
+                  background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+                  padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px",
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {u.email}
+                      {u.is_admin && (
+                        <span style={{ marginLeft: "6px", fontSize: "10px", background: "#ede9fe", color: "#7c3aed", padding: "2px 6px", borderRadius: "999px", fontWeight: 700 }}>Admin</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "11px", color: u.is_approved ? "#16a34a" : "#d97706", fontWeight: 600, marginTop: "2px" }}>
+                      {u.is_approved ? "✓ Aprobado" : "⏳ Pendiente"}
+                    </div>
+                  </div>
+                  {!u.is_approved && (
+                    <button onClick={() => handleApprove(u.uid, true)} style={{
+                      padding: "8px 14px", background: "#f0fdf4", color: "#15803d",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                      WebkitTapHighlightColor: "transparent",
+                    }}>Aprobar</button>
+                  )}
+                  {u.is_approved && !u.is_admin && (
+                    <button onClick={() => handleApprove(u.uid, false)} style={{
+                      padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                      WebkitTapHighlightColor: "transparent",
+                    }}>Revocar</button>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       )}
+
+      {/* ─── PRICES ─── */}
+      {tab === "Prices" && (
+        <PricesTab catalog={catalog} editingPrices={editingPrices} onPriceChange={handlePriceChange}
+          onSaveOne={handleSavePrice} onSaveAll={handleSaveAll} onCsvUpload={handleCsvUpload}
+          onAddProduct={handleAddProduct} onDeleteProduct={handleDeleteProduct}
+          onToggleAvailable={handleToggleAvailable} categories={categories} onUpdateProduct={handleUpdateProduct} />
+      )}
+
+      {/* ─── CATEGORIES ─── */}
+      {tab === "Categories" && <CategoriesTab categories={categories} onAddCategory={handleAddCategory} />}
     </div>
   );
 };
