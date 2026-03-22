@@ -324,93 +324,6 @@ const CategoriesTab = ({ categories, onAddCategory }) => {
   );
 };
 
-// ─── RequestsTab ───
-const RequestsTab = ({ requests, onRequestResponse }) => {
-  const [respondingTo, setRespondingTo] = useState(null);
-  const [response, setResponse] = useState("");
-
-  const submitResponse = async (status) => {
-    if (!respondingTo) return;
-    const finalResponse = response.trim() || (status === 'approved' ? 'Aprobado' : 'Rechazado');
-    try { await onRequestResponse(respondingTo, status, finalResponse); }
-    catch (e) { console.error('Error:', e); }
-    setRespondingTo(null); setResponse("");
-  };
-
-  const handleCleanup = async () => {
-    if (!confirm("¿Eliminar todas las solicitudes pendientes?")) return;
-    try {
-      const res = await apiFetch(`${API_BASE_URL}/admin/requests/cleanup`, { method: "DELETE" });
-      if (res.ok) { const data = await res.json(); alert(`Se eliminaron ${data.deleted.length} solicitudes`); window.location.reload(); }
-    } catch (e) { console.error("Error:", e); alert("Error al limpiar solicitudes"); }
-  };
-
-  const typeLabel = (t) => ({ modify: "Modificar", cancel: "Cancelar", add_items: "Agregar" }[t] || t);
-
-  if (requests.length === 0) {
-    return (
-      <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
-        <div style={{ fontSize: "48px", marginBottom: "8px" }}>📩</div>
-        <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>No hay solicitudes pendientes</p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-        <span style={{ fontSize: "13px", color: "#9ca3af" }}>{requests.length} pendientes</span>
-        <button onClick={handleCleanup} style={{
-          padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
-          border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-        }}>🗑️ Limpiar Todo</button>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        {requests.map(req => (
-          <div key={req.id} style={{
-            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
-            overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-          }}>
-            <div style={{ padding: "12px 14px", background: "#f9fafb", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>Orden #{req.order_id}</span>
-                <span style={{ fontSize: "12px", color: "#9ca3af", marginLeft: "8px" }}>{req.user_email?.split("@")[0]}</span>
-              </div>
-              <span style={{ padding: "3px 8px", borderRadius: "6px", fontSize: "11px", background: "#fef3c7", color: "#92400e", fontWeight: 600 }}>
-                {typeLabel(req.request_type)}
-              </span>
-            </div>
-            <div style={{ padding: "12px 14px" }}>
-              <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>{req.message}</p>
-              <div style={{ fontSize: "11px", color: "#9ca3af", marginBottom: "10px" }}>
-                {new Date(req.created_at).toLocaleString('es-MX')}
-              </div>
-
-              {respondingTo !== req.id ? (
-                <ActionBtn onClick={() => { setRespondingTo(req.id); setResponse(""); }} bg="#eff6ff" color="#2563eb">
-                  Responder
-                </ActionBtn>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <textarea value={response} onChange={e => setResponse(e.target.value)}
-                    placeholder="Respuesta al cliente..."
-                    style={{ width: "100%", minHeight: "60px", padding: "10px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px", resize: "vertical", boxSizing: "border-box" }} />
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    <ActionBtn onClick={() => submitResponse('approved')} bg="#f0fdf4" color="#15803d">✓ Aprobar</ActionBtn>
-                    <ActionBtn onClick={() => submitResponse('rejected')} bg="#fef2f2" color="#dc2626">✕ Rechazar</ActionBtn>
-                    <ActionBtn onClick={() => { setRespondingTo(null); setResponse(""); }} bg="#f3f4f6" color="#374151">Cancelar</ActionBtn>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // ─── ShoppingListTab ───
 const ShoppingListTab = ({ orders, catalog }) => {
   const activeOrders = orders.filter(o => o.status === "pending" || o.status === "in_progress");
@@ -500,7 +413,6 @@ const Admin = () => {
   const [catalog, setCatalog] = useState([]);
   const [categories, setCategories] = useState([]);
   const [editingPrices, setEditingPrices] = useState({});
-  const [requests, setRequests] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("not_delivered");
@@ -509,7 +421,6 @@ const Admin = () => {
   const fetchOrders = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/orders`); setOrders(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchUsers = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/users`); setUsers(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchCategories = async () => { try { const r = await apiFetch(`${API_BASE_URL}/categories`); setCategories(await r.json()); } catch (e) { console.error("Error:", e); } };
-  const fetchRequests = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/requests`); const d = await r.json(); setRequests(d.filter(req => req.status === 'pending')); } catch (e) { console.error("Error:", e); } };
   const fetchInvitations = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/invitations`); setInvitations(await r.json()); } catch (e) { console.error("Error:", e); } };
 
   const refreshCatalog = async () => {
@@ -534,8 +445,8 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    fetchOrders(); fetchUsers(); fetchCategories(); fetchRequests(); fetchInvitations(); refreshCatalog();
-    const interval = setInterval(() => { fetchOrders(); fetchRequests(); }, 3 * 60 * 1000);
+    fetchOrders(); fetchUsers(); fetchCategories(); fetchInvitations(); refreshCatalog();
+    const interval = setInterval(() => { fetchOrders(); }, 3 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -554,15 +465,6 @@ const Admin = () => {
   const handleStatusChange = async (orderId, status) => {
     try { await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, { method: "PUT", body: JSON.stringify({ status }) }); await fetchOrders(); }
     catch (e) { console.error("Error:", e); }
-  };
-
-  const handleRequestResponse = async (requestId, status, adminResponse) => {
-    try {
-      const r = await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, { method: "PUT", body: JSON.stringify({ status, admin_response: adminResponse }) });
-      if (!r.ok) throw new Error(await r.text());
-      setRequests(prev => prev.filter(req => req.id !== requestId));
-      await fetchOrders();
-    } catch (e) { console.error("Error:", e); }
   };
 
   const handlePriceChange = (id, field, value) => { setEditingPrices(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } })); };
