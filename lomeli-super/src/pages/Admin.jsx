@@ -436,6 +436,7 @@ const Admin = () => {
   const [categories, setCategories] = useState([]);
   const [editingPrices, setEditingPrices] = useState({});
   const [invitations, setInvitations] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
@@ -444,6 +445,7 @@ const Admin = () => {
   const fetchUsers = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/users`); setUsers(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchCategories = async () => { try { const r = await apiFetch(`${API_BASE_URL}/categories`); setCategories(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchInvitations = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/invitations`); setInvitations(await r.json()); } catch (e) { console.error("Error:", e); } };
+  const fetchRequests = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/requests`); setRequests(await r.json()); } catch (e) { console.error("Error:", e); } };
 
   const refreshCatalog = async () => {
     try {
@@ -467,8 +469,8 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    fetchOrders(); fetchUsers(); fetchCategories(); fetchInvitations(); refreshCatalog();
-    const interval = setInterval(() => { fetchOrders(); }, 3 * 60 * 1000);
+    fetchOrders(); fetchUsers(); fetchCategories(); fetchInvitations(); fetchRequests(); refreshCatalog();
+    const interval = setInterval(() => { fetchOrders(); fetchRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -539,6 +541,19 @@ const Admin = () => {
     await apiFetch(`${API_BASE_URL}/admin/categories`, { method: "POST", body: JSON.stringify({ name: categoryName }) });
     await fetchCategories();
   };
+
+  const handleRequestResponse = async (requestId, status) => {
+    try {
+      await apiFetch(`${API_BASE_URL}/admin/requests/${requestId}/respond`, {
+        method: "PUT",
+        body: JSON.stringify({ status, admin_response: status === "approved" ? "Aprobado" : "Rechazado" }),
+      });
+      await fetchRequests();
+      await fetchOrders();
+    } catch (e) { console.error("Error responding to request:", e); }
+  };
+
+  const getOrderRequest = (orderId) => requests.find(r => r.order_id === orderId && r.status === "pending");
 
   // --- Stats ---
   const stats = useMemo(() => {
@@ -700,18 +715,25 @@ const Admin = () => {
                   👤 {email?.split("@")[0]} — {userOrders.length} {userOrders.length > 1 ? "órdenes" : "orden"}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {userOrders.map(order => (
+                  {userOrders.map(order => {
+                    const pendingReq = getOrderRequest(order.id);
+                    return (
                     <div key={order.id} style={{
-                      background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+                      background: pendingReq ? "#fef2f2" : "#fff",
+                      border: pendingReq ? "2px solid #ef4444" : "1px solid #e5e7eb",
+                      borderRadius: "14px",
                       overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
                     }}>
                       {/* Order header */}
                       <div style={{
-                        padding: "10px 14px", background: "#f9fafb", borderBottom: "1px solid #f3f4f6",
+                        padding: "10px 14px",
+                        background: pendingReq ? "#fee2e2" : "#f9fafb",
+                        borderBottom: "1px solid #f3f4f6",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>#{order.id}</span>
+                          {pendingReq && <span style={{ fontSize: "11px", fontWeight: 700, color: "#dc2626" }}>⚠️ Solicitud</span>}
                           {catalog.length > 0 && (
                             <span style={{ fontWeight: 700, color: "#15803d", fontSize: "13px" }}>
                               {formatMXN(calcOrderTotal(order.products, catalog))}
@@ -722,6 +744,43 @@ const Admin = () => {
                       </div>
 
                       <div style={{ padding: "10px 14px" }}>
+                        {/* Pending request details */}
+                        {pendingReq && (
+                          <div style={{
+                            background: "#fff", border: "1px solid #fca5a5", borderRadius: "10px",
+                            padding: "10px 12px", marginBottom: "10px",
+                          }}>
+                            <div style={{ fontSize: "12px", fontWeight: 700, color: "#dc2626", marginBottom: "6px" }}>
+                              📝 {pendingReq.request_type === "modify" ? "Solicita modificar" : pendingReq.request_type === "cancel" ? "Solicita cancelar" : "Solicitud"} — {pendingReq.user_email?.split("@")[0]}
+                            </div>
+                            {pendingReq.message && (
+                              <p style={{ margin: "0 0 8px", fontSize: "12px", color: "#374151", fontStyle: "italic" }}>
+                                "{pendingReq.message}"
+                              </p>
+                            )}
+                            {pendingReq.proposed_changes && (() => {
+                              const changes = typeof pendingReq.proposed_changes === "string" ? JSON.parse(pendingReq.proposed_changes) : pendingReq.proposed_changes;
+                              return (
+                                <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>
+                                  <span style={{ fontWeight: 600 }}>Cambios propuestos:</span>
+                                  {changes.map((p, i) => (
+                                    <div key={i} style={{ padding: "2px 0" }}>
+                                      {p.name}: {p.quantity} {p.unit === "kg" ? "kg" : "pz"}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <ActionBtn onClick={() => handleRequestResponse(pendingReq.id, "approved")} bg="#f0fdf4" color="#15803d">
+                                ✅ Aprobar
+                              </ActionBtn>
+                              <ActionBtn onClick={() => handleRequestResponse(pendingReq.id, "rejected")} bg="#fef2f2" color="#dc2626">
+                                ❌ Rechazar
+                              </ActionBtn>
+                            </div>
+                          </div>
+                        )}
                         {/* Products */}
                         {order.products.map((p, i) => (
                           <div key={i} style={{
@@ -757,7 +816,7 @@ const Admin = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             ))
