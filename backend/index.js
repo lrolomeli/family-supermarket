@@ -74,7 +74,7 @@ const processImage = async (file, filename) => {
     // Create a unique filename
     const name = path.parse(filename).name;
     const webpFilename = `${name}.webp`;
-    const outputPath = path.join(ASSETS_DIR, 'assets', webpFilename);
+    const outputPath = path.join(ASSETS_DIR, 'images', webpFilename);
     
     // Process image: resize to max 800x800, convert to WebP, quality 80%
     await sharp(file.buffer)
@@ -85,7 +85,7 @@ const processImage = async (file, filename) => {
       .webp({ quality: 80 })
       .toFile(outputPath);
     
-    return `/assets/${webpFilename}`;
+    return `/images/${webpFilename}`;
   } catch (error) {
     console.error('Error processing image:', error);
     throw error;

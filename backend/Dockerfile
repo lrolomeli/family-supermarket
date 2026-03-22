@@ -13,7 +13,7 @@ RUN npm install --os=linux --cpu=$(node -p "process.arch") --libc=musl sharp
 COPY . .
 
 ENV ASSETS_DIR=/app/public
-RUN mkdir -p /app/public/assets
+RUN mkdir -p /app/public/images
 
 EXPOSE 5000
 CMD ["node", "index.js"]

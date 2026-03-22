@@ -145,7 +145,7 @@ const FavoritesAndHistory = () => {
   const getProductImage = (name) => {
     const found = productCatalog.find(p => p.name === name);
     const img = found?.image;
-    return img || '/assets/default-product.svg';
+    return img || '/images/default-product.svg';
   };
 
   const formatDate = (dateStr) => {

@@ -27,7 +27,7 @@ if (!PEXELS_API_KEY) {
   process.exit(1);
 }
 
-const ASSETS_DIR = path.join(__dirname, "../lomeli-super/public/assets");
+const ASSETS_DIR = path.join(__dirname, "../lomeli-super/public/images");
 const DELAY_MS = 250; // polite delay between API calls
 
 const pool = new Pool({
@@ -206,7 +206,7 @@ async function saveImage(buffer, productId) {
     .resize(400, 400, { fit: "cover" })
     .webp({ quality: 80 })
     .toFile(outputPath);
-  return `/assets/${filename}`;
+  return `/images/${filename}`;
 }
 
 function sleep(ms) {

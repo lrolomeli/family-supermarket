@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 
-const imgSrc = (image) => image || "/assets/default-product.svg";
+const imgSrc = (image) => image || "/images/default-product.svg";
 
 // Bottom sheet para seleccionar cantidad y unidad
 const ProductSheet = ({ product, onAdd, onClose }) => {
