@@ -138,6 +138,7 @@ const syncUser = async (uid, email) => {
       "UPDATE users SET uid = $1, is_admin = $2, is_approved = $3 WHERE email = $4",
       [uid, newAdmin, newApproved, email]
     );
+    return true;
   } else if (existing.length) {
     // Same uid — just ensure admin/approved flags
     if (isAdmin) {
@@ -146,12 +147,17 @@ const syncUser = async (uid, email) => {
         [uid]
       );
     }
+    return true;
   } else {
-    // New user
-    await pool.query(
-      "INSERT INTO users (uid, email, is_admin, is_approved) VALUES ($1, $2, $3, $3)",
-      [uid, email, isAdmin]
-    );
+    // New user — only create if admin email, otherwise reject
+    if (isAdmin) {
+      await pool.query(
+        "INSERT INTO users (uid, email, is_admin, is_approved) VALUES ($1, $2, true, true)",
+        [uid, email]
+      );
+      return true;
+    }
+    return false;
   }
 };
 
@@ -319,10 +325,52 @@ server.post("/auth/login", async (req, res) => {
   }
 });
 
+// POST /auth/register-google - register Google user with invitation code
+server.post("/auth/register-google", authenticate, async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).send("Código de invitación requerido");
+
+    // Validate invitation
+    const { rows: inv } = await pool.query("SELECT * FROM invitations WHERE code = $1", [code]);
+    if (!inv.length) return res.status(404).send("Invitación no encontrada");
+    if (inv[0].is_active === false) return res.status(400).send("Esta invitación fue desactivada");
+    if (!inv[0].multi_use && inv[0].used_by) return res.status(400).send("Esta invitación ya fue utilizada");
+    if (inv[0].expires_at && new Date(inv[0].expires_at) < new Date()) return res.status(400).send("Esta invitación ha expirado");
+
+    // Check if user already exists
+    const { rows: existing } = await pool.query("SELECT id FROM users WHERE email = $1", [req.user.email]);
+    if (existing.length) return res.status(400).send("Este email ya está registrado");
+
+    // Create user as approved (they have a valid invitation)
+    await pool.query(
+      "INSERT INTO users (uid, email, display_name, auth_type, is_approved) VALUES ($1, $2, $3, 'google', true)",
+      [req.user.uid, req.user.email, req.user.name || req.user.email.split("@")[0]]
+    );
+
+    // Mark invitation as used (only for single-use)
+    if (!inv[0].multi_use) {
+      await pool.query(
+        "UPDATE invitations SET used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2",
+        [req.user.uid, inv[0].id]
+      );
+    }
+
+    res.status(201).json({ registered: true });
+  } catch (error) {
+    console.error("Error registering Google user:", error);
+    res.status(500).send(error.message);
+  }
+});
+
 // GET /me - verifica si el usuario autenticado está aprobado
 server.get("/me", authenticate, async (req, res) => {
   try {
-    await syncUser(req.user.uid, req.user.email);
+    const synced = await syncUser(req.user.uid, req.user.email);
+    
+    if (!synced) {
+      return res.status(403).json({ reason: "not_registered" });
+    }
     
     // Ensure admin email is always approved and admin
     if (ADMIN_EMAIL && req.user.email && req.user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
@@ -336,7 +384,7 @@ server.get("/me", authenticate, async (req, res) => {
       "SELECT is_approved, is_admin FROM users WHERE uid = $1",
       [req.user.uid]
     );
-    if (!rows.length) return res.status(200).json({ approved: false });
+    if (!rows.length) return res.status(403).json({ reason: "not_registered" });
     res.status(200).json({ approved: rows[0].is_approved || rows[0].is_admin });
   } catch (error) {
     res.status(500).send(error.message);

@@ -15,9 +15,23 @@ const Login = () => {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setError("");
     try {
       await signInWithPopup(auth, googleProvider);
       await primeToken();
+      // Check if user is registered in the DB
+      const res = await fetch(`${API_BASE_URL}/me`, {
+        headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` },
+      });
+      if (res.status === 403) {
+        const data = await res.json();
+        if (data.reason === "not_registered") {
+          await auth.signOut();
+          setError("No tienes cuenta. Necesitas un link de invitación para registrarte.");
+          setLoading(false);
+          return;
+        }
+      }
       navigate("/order");
     } catch (error) {
       console.error("Google Sign-In error:", error);

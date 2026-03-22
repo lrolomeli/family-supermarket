@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
 
+const imgSrc = (image) => image ? `${API_BASE_URL}${image}` : "/assets/default-product.svg";
+
 // Bottom sheet para seleccionar cantidad y unidad
 const ProductSheet = ({ product, onAdd, onClose }) => {
   const sellBy = product.sell_by || "both";
@@ -9,6 +11,8 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
   const [quantity, setQuantity] = useState(defaultUnit === "kg" ? 0.5 : 1);
   const [unit, setUnit] = useState(defaultUnit);
   const unitOptions = sellBy === "both" ? ["pieces", "kg"] : [sellBy];
+
+  const price = unit === "kg" ? Number(product.price_kg) : Number(product.price_piece);
 
   const handleAdd = () => {
     onAdd(product, quantity, unit);
@@ -18,65 +22,78 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
   return (
     <>
       <div onClick={onClose} style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100,
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300,
+        animation: "fadeIn .15s ease",
       }} />
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 301,
         background: "#fff", borderRadius: "20px 20px 0 0",
-        padding: "24px 20px calc(36px + env(safe-area-inset-bottom, 0px))",
-        boxShadow: "0 -4px 24px rgba(0,0,0,0.12)",
+        padding: "20px 20px calc(24px + env(safe-area-inset-bottom, 0px))",
+        boxShadow: "0 -8px 30px rgba(0,0,0,0.15)",
       }}>
-        <div style={{ width: "40px", height: "4px", background: "#e5e7eb", borderRadius: "2px", margin: "0 auto 20px" }} />
+        <div style={{ width: "36px", height: "4px", background: "#e5e7eb", borderRadius: "2px", margin: "0 auto 16px" }} />
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-          <img src={product.image || '/assets/default-product.svg'} alt={product.name}
-            style={{ width: "64px", height: "64px", borderRadius: "12px", objectFit: "cover" }} />
-          <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#15803d" }}>{product.name}</h3>
+        {/* Product header */}
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
+          <img src={imgSrc(product.image)} alt={product.name}
+            style={{ width: "56px", height: "56px", borderRadius: "14px", objectFit: "cover", border: "1px solid #f3f4f6" }} />
+          <div>
+            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#111827" }}>{product.name}</h3>
+            {price > 0 && (
+              <span style={{ fontSize: "14px", color: "#15803d", fontWeight: 600 }}>
+                ${price.toFixed(2)} / {unit === "kg" ? "kg" : "pz"}
+              </span>
+            )}
+          </div>
         </div>
 
+        {/* Unit selector */}
         {unitOptions.length > 1 && (
-          <>
-            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#6b7280", fontWeight: 600 }}>UNIDAD</p>
-            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-              {unitOptions.map(u => (
-                <button key={u} onClick={() => { setUnit(u); setQuantity(u === "kg" ? 0.5 : 1); }} style={{
-                  flex: 1, padding: "12px", borderRadius: "10px", border: "2px solid",
-                  borderColor: unit === u ? "#15803d" : "#e5e7eb",
-                  background: unit === u ? "#f0fdf4" : "#fff",
-                  color: unit === u ? "#15803d" : "#6b7280",
-                  fontWeight: 600, fontSize: "15px", cursor: "pointer",
-                }}>
-                  {u === "pieces" ? "🧺 Piezas" : "⚖️ Kilos"}
-                </button>
-              ))}
-            </div>
-          </>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+            {unitOptions.map(u => (
+              <button key={u} onClick={() => { setUnit(u); setQuantity(u === "kg" ? 0.5 : 1); }} style={{
+                flex: 1, padding: "10px", borderRadius: "10px", border: "2px solid",
+                borderColor: unit === u ? "#15803d" : "#e5e7eb",
+                background: unit === u ? "#f0fdf4" : "#fff",
+                color: unit === u ? "#15803d" : "#6b7280",
+                fontWeight: 600, fontSize: "14px", cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}>
+                {u === "pieces" ? "🧺 Piezas" : "⚖️ Kilos"}
+              </button>
+            ))}
+          </div>
         )}
         {unitOptions.length === 1 && (
-          <p style={{ margin: "0 0 16px", fontSize: "14px", color: "#6b7280" }}>
+          <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#9ca3af" }}>
             Se vende por {unit === "pieces" ? "piezas" : "kilo"}
           </p>
         )}
 
-        <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#6b7280", fontWeight: 600 }}>CANTIDAD</p>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+        {/* Quantity selector */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: "20px", marginBottom: "20px", padding: "8px 0",
+        }}>
           <button onClick={() => { const step = unit === "kg" ? 0.5 : 1; const min = unit === "kg" ? 0.5 : 1; setQuantity(q => Math.max(min, +(q - step).toFixed(1))); }} style={{
-            width: "48px", height: "48px", borderRadius: "50%", border: "2px solid #e5e7eb",
-            background: "#fff", fontSize: "22px", cursor: "pointer", color: "#374151",
+            width: "44px", height: "44px", borderRadius: "50%", border: "2px solid #e5e7eb",
+            background: "#fff", fontSize: "20px", cursor: "pointer", color: "#374151",
             display: "flex", alignItems: "center", justifyContent: "center",
+            WebkitTapHighlightColor: "transparent",
           }}>−</button>
-          <span style={{ fontSize: "28px", fontWeight: 700, color: "#111827", minWidth: "50px", textAlign: "center" }}>
+          <span style={{ fontSize: "32px", fontWeight: 700, color: "#111827", minWidth: "70px", textAlign: "center" }}>
             {quantity}{unit === "kg" ? " kg" : ""}
           </span>
           <button onClick={() => { const step = unit === "kg" ? 0.5 : 1; setQuantity(q => +(q + step).toFixed(1)); }} style={{
-            width: "48px", height: "48px", borderRadius: "50%", border: "none",
-            background: "#15803d", fontSize: "22px", cursor: "pointer", color: "#fff",
+            width: "44px", height: "44px", borderRadius: "50%", border: "none",
+            background: "#15803d", fontSize: "20px", cursor: "pointer", color: "#fff",
             display: "flex", alignItems: "center", justifyContent: "center",
+            WebkitTapHighlightColor: "transparent",
           }}>+</button>
         </div>
 
         <button onClick={handleAdd} style={{
-          width: "100%", padding: "16px", background: "#15803d", color: "#fff",
+          width: "100%", padding: "14px", background: "#15803d", color: "#fff",
           border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700,
           cursor: "pointer", WebkitTapHighlightColor: "transparent",
         }}>
@@ -87,7 +104,6 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
   );
 };
 
-// Normaliza texto para búsqueda (sin acentos, minúsculas)
 const normalize = (str) =>
   str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -100,6 +116,7 @@ const Order = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [showUnavailable, setShowUnavailable] = useState(false);
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -113,7 +130,6 @@ const Order = () => {
       .catch(e => console.error("Error loading products:", e));
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClick = (e) => {
       if (
@@ -180,59 +196,83 @@ const Order = () => {
 
   if (submitted) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "20px", textAlign: "center" }}>
-        <div style={{ fontSize: "64px", marginBottom: "16px" }}>✅</div>
-        <h2 style={{ color: "#15803d", margin: "0 0 8px" }}>Orden enviada</h2>
-        <p style={{ color: "#6b7280" }}>Tu pedido ha sido recibido.</p>
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", minHeight: "70vh", padding: "20px", textAlign: "center",
+      }}>
+        <div style={{ fontSize: "56px", marginBottom: "12px" }}>✅</div>
+        <h2 style={{ color: "#15803d", margin: "0 0 8px", fontSize: "22px" }}>Orden enviada</h2>
+        <p style={{ color: "#6b7280", fontSize: "15px" }}>Tu pedido ha sido recibido.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "16px", maxWidth: "600px", margin: "0 auto", paddingBottom: "100px" }}>
-      <h2 style={{ margin: "0 0 16px", color: "#15803d", fontSize: "22px" }}>Nuevo Pedido</h2>
+    <div style={{ padding: "16px 16px 120px", maxWidth: "600px", margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "16px" }}>
+        <h2 style={{ margin: "0 0 4px", color: "#111827", fontSize: "22px", fontWeight: 700 }}>
+          Nuevo Pedido
+        </h2>
+        <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af" }}>
+          Busca productos y agrégalos al carrito
+        </p>
+      </div>
 
-      {/* Search input */}
-      <div style={{ position: "relative" }}>
-        <input
-          ref={searchRef}
-          type="text"
-          placeholder="Buscar producto..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setFocused(true); }}
-          onFocus={() => setFocused(true)}
-          style={{
-            width: "100%", padding: "14px 16px", fontSize: "16px",
-            border: "2px solid #d1d5db", borderRadius: "12px",
-            outline: "none", boxSizing: "border-box",
-            WebkitAppearance: "none",
-          }}
-        />
+      {/* Search */}
+      <div style={{ position: "relative", marginBottom: "12px" }}>
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "#9ca3af", pointerEvents: "none" }}>🔍</span>
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Buscar producto..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setFocused(true); }}
+            onFocus={() => setFocused(true)}
+            style={{
+              width: "100%", padding: "12px 16px 12px 42px", fontSize: "16px",
+              border: "2px solid #e5e7eb", borderRadius: "14px",
+              outline: "none", boxSizing: "border-box",
+              WebkitAppearance: "none", background: "#f9fafb",
+              transition: "border-color .15s",
+            }}
+            onFocusCapture={e => e.target.style.borderColor = "#15803d"}
+            onBlurCapture={e => e.target.style.borderColor = "#e5e7eb"}
+          />
+        </div>
 
-        {/* Dropdown results */}
+        {/* Dropdown */}
         {focused && filtered.length > 0 && (
           <div ref={dropdownRef} style={{
             position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
-            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-            marginTop: "4px", maxHeight: "300px", overflowY: "auto",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+            marginTop: "6px", maxHeight: "280px", overflowY: "auto",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            WebkitOverflowScrolling: "touch",
           }}>
-            {filtered.map(p => (
+            {filtered.map((p, i) => (
               <div
                 key={p.id}
                 onClick={() => { setSelectedProduct(p); setFocused(false); }}
                 style={{
                   display: "flex", alignItems: "center", gap: "12px",
-                  padding: "12px 16px", cursor: "pointer",
-                  borderBottom: "1px solid #f3f4f6",
+                  padding: "10px 14px", cursor: "pointer",
+                  borderBottom: i < filtered.length - 1 ? "1px solid #f3f4f6" : "none",
+                  WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <img
-                  src={p.image || "/assets/default-product.svg"}
-                  alt={p.name}
-                  style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover" }}
-                />
-                <span style={{ fontSize: "15px", color: "#111827" }}>{p.name}</span>
+                <img src={imgSrc(p.image)} alt={p.name}
+                  style={{ width: "38px", height: "38px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "15px", color: "#111827", fontWeight: 500 }}>{p.name}</div>
+                  <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                    {p.price_piece > 0 && `$${Number(p.price_piece).toFixed(0)}/pz`}
+                    {p.price_piece > 0 && p.price_kg > 0 && " · "}
+                    {p.price_kg > 0 && `$${Number(p.price_kg).toFixed(0)}/kg`}
+                  </div>
+                </div>
+                <span style={{ fontSize: "18px", color: "#d1d5db" }}>›</span>
               </div>
             ))}
           </div>
@@ -241,84 +281,122 @@ const Order = () => {
         {focused && search.trim() && filtered.length === 0 && (
           <div style={{
             position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
-            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-            marginTop: "4px", padding: "16px", textAlign: "center",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.1)", color: "#6b7280",
+            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px",
+            marginTop: "6px", padding: "20px", textAlign: "center",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)", color: "#9ca3af", fontSize: "14px",
           }}>
             No se encontraron productos
           </div>
         )}
       </div>
 
-      {/* Unavailable products info */}
+      {/* Unavailable products (collapsible) */}
       {unavailable.length > 0 && (
         <div style={{
-          marginTop: "16px", padding: "12px 16px",
-          background: "#fef3c7", border: "1px solid #fde68a", borderRadius: "10px",
+          marginBottom: "16px", borderRadius: "12px", overflow: "hidden",
+          border: "1px solid #fde68a", background: "#fffbeb",
         }}>
-          <p style={{ margin: "0 0 6px", fontSize: "13px", fontWeight: 600, color: "#92400e" }}>
-            ⚠️ Productos no disponibles por el momento:
-          </p>
-          <p style={{ margin: 0, fontSize: "13px", color: "#78350f", lineHeight: 1.6 }}>
-            {unavailable.map(p => p.name).join(", ")}
-          </p>
+          <button onClick={() => setShowUnavailable(!showUnavailable)} style={{
+            width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 14px", background: "none", border: "none", cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "#92400e" }}>
+              ⚠️ {unavailable.length} productos no disponibles
+            </span>
+            <span style={{ fontSize: "14px", color: "#92400e", transform: showUnavailable ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
+          </button>
+          {showUnavailable && (
+            <div style={{ padding: "0 14px 12px" }}>
+              <p style={{ margin: 0, fontSize: "12px", color: "#78350f", lineHeight: 1.7 }}>
+                {unavailable.map(p => p.name).join(", ")}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Cart items preview */}
+      {/* Cart */}
       {cart.length > 0 && (
-        <div style={{ marginTop: "24px" }}>
-          <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#6b7280", fontWeight: 600 }}>
-            EN TU CARRITO ({cartTotal} {cartTotal === 1 ? "artículo" : "artículos"})
-          </p>
+        <div style={{
+          background: "#fff", borderRadius: "14px", border: "1px solid #e5e7eb",
+          overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+        }}>
+          <div style={{
+            padding: "10px 14px", background: "#f9fafb", borderBottom: "1px solid #f3f4f6",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: "13px", fontWeight: 700, color: "#374151", letterSpacing: "0.3px" }}>
+              🛒 CARRITO ({cart.length})
+            </span>
+            <span style={{ fontSize: "12px", color: "#6b7280" }}>
+              {cartTotal} {cartTotal === 1 ? "artículo" : "artículos"}
+            </span>
+          </div>
           {cart.map((item, idx) => (
             <div key={idx} style={{
-              display: "flex", alignItems: "center", gap: "12px",
-              padding: "10px 0", borderBottom: "1px solid #f3f4f6",
+              display: "flex", alignItems: "center", gap: "10px",
+              padding: "10px 14px",
+              borderBottom: idx < cart.length - 1 ? "1px solid #f3f4f6" : "none",
             }}>
-              <img
-                src={item.product.image || "/assets/default-product.svg"}
-                alt={item.product.name}
-                style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover" }}
-              />
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: "14px", color: "#111827" }}>{item.product.name}</span>
-                <span style={{ fontSize: "13px", color: "#6b7280", marginLeft: "8px" }}>
+              <img src={imgSrc(item.product.image)} alt={item.product.name}
+                style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "14px", color: "#111827", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {item.product.name}
+                </div>
+                <div style={{ fontSize: "12px", color: "#6b7280" }}>
                   {item.quantity} {item.unit === "pieces" ? "pz" : "kg"}
-                </span>
+                </div>
               </div>
               <button onClick={() => handleRemoveFromCart(idx)} style={{
-                background: "none", border: "none", color: "#ef4444",
-                fontSize: "18px", cursor: "pointer", padding: "4px 8px",
+                background: "#fef2f2", border: "none", color: "#ef4444",
+                width: "30px", height: "30px", borderRadius: "8px",
+                fontSize: "14px", cursor: "pointer", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                WebkitTapHighlightColor: "transparent",
               }}>✕</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Floating submit button */}
+      {/* Empty state */}
+      {cart.length === 0 && !search && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#d1d5db" }}>
+          <div style={{ fontSize: "48px", marginBottom: "8px" }}>🛒</div>
+          <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>
+            Busca productos para empezar tu pedido
+          </p>
+        </div>
+      )}
+
+      {/* Floating submit */}
       {cart.length > 0 && (
         <div style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 90,
-          padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px))",
-          background: "#fff", borderTop: "1px solid #e5e7eb",
+          position: "fixed", bottom: "60px", left: 0, right: 0, zIndex: 95,
+          padding: "10px 16px calc(10px + env(safe-area-inset-bottom, 0px))",
+          background: "linear-gradient(transparent, #fff 20%)",
+          pointerEvents: "none",
         }}>
           <button
             onClick={handleSubmitOrder}
             disabled={submitting}
             style={{
-              width: "100%", padding: "16px", background: submitting ? "#86efac" : "#15803d",
-              color: "#fff", border: "none", borderRadius: "12px",
+              width: "100%", maxWidth: "600px", margin: "0 auto", display: "block",
+              padding: "14px", background: submitting ? "#86efac" : "#15803d",
+              color: "#fff", border: "none", borderRadius: "14px",
               fontSize: "16px", fontWeight: 700, cursor: submitting ? "default" : "pointer",
               WebkitTapHighlightColor: "transparent",
+              boxShadow: "0 4px 12px rgba(21,128,61,0.3)",
+              pointerEvents: "auto",
             }}
           >
-            {submitting ? "Enviando..." : `Confirmar Orden (${cartTotal})`}
+            {submitting ? "Enviando..." : `Confirmar Orden (${cart.length} productos)`}
           </button>
         </div>
       )}
 
-      {/* ProductSheet */}
       {selectedProduct && (
         <ProductSheet
           product={selectedProduct}

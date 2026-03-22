@@ -83,7 +83,7 @@ INSERT INTO products (id, name, price_piece, price_kg, image, category, sell_by)
   (71, 'Pera',                     12.00, 45.00, NULL, 'frutas',        'both'),
   (72, 'Perejil (manojo)',          8.00,  0, NULL, 'hierbas',       'pieces'),
   (73, 'Poro',                     15.00,  0, NULL, 'verduras',      'pieces'),
-  (74, 'Pina',                     25.00,  0, NULL, 'frutas', 'pieces'),
+  (74, 'Piña',                     25.00,  0, NULL, 'frutas', 'pieces'),
   (75, 'Platano',                    0, 18.00, NULL, 'frutas', 'kg'),
   (76, 'Penca de platano',         20.00,  0, NULL, 'frutas',        'pieces'),
   (77, 'Penca de platano dominico',18.00,  0, NULL, 'frutas', 'pieces'),
@@ -119,7 +119,7 @@ ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   price_piece = EXCLUDED.price_piece,
   price_kg = EXCLUDED.price_kg,
-  image = EXCLUDED.image,
+  image = COALESCE(products.image, EXCLUDED.image),
   category = EXCLUDED.category,
   sell_by = EXCLUDED.sell_by;
 

@@ -30,8 +30,18 @@ const App = () => {
         setUser({ email: parsed.email, uid: parsed.uid, displayName: parsed.display_name, isLocal: true });
         // Verify with backend
         apiFetch(`${API_BASE_URL}/me`)
-          .then(r => r.json())
-          .then(data => setApproved(data.approved))
+          .then(r => {
+            if (r.status === 403) {
+              // Local user no longer registered — clear and go to login
+              localStorage.removeItem("local_user");
+              localStorage.removeItem("local_token");
+              setUser(null);
+              setApproved(null);
+              return null;
+            }
+            return r.json();
+          })
+          .then(data => { if (data) setApproved(data.approved); })
           .catch(() => setApproved(false));
         return;
       } catch (e) {
@@ -42,17 +52,29 @@ const App = () => {
 
     // Firebase auth listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser ?? null);
       if (firebaseUser) {
         try {
           const res = await apiFetch(`${API_BASE_URL}/me`);
+          if (res.status === 403) {
+            const data = await res.json();
+            if (data.reason === "not_registered") {
+              // Google user not registered — sign out and redirect to login
+              await auth.signOut();
+              setUser(null);
+              setApproved(null);
+              return;
+            }
+          }
           const data = await res.json();
+          setUser(firebaseUser);
           setApproved(data.approved);
         } catch (e) {
           console.error("/me error:", e);
+          setUser(firebaseUser);
           setApproved(false);
         }
       } else {
+        setUser(null);
         setApproved(null);
       }
     });

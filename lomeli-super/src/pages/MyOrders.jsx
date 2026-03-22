@@ -320,7 +320,8 @@ const MyOrders = () => {
 
   const getProductImage = (name) => {
     const found = productCatalog.find((p) => p.name === name);
-    return found ? (found.image || '/assets/default-product.svg') : '/assets/default-product.svg';
+    const img = found?.image;
+    return img ? `${API_BASE_URL}${img}` : '/assets/default-product.svg';
   };
 
   return (
