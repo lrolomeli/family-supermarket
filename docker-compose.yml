@@ -55,6 +55,8 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    volumes:
+      - ./lomeli-super/public/assets:/usr/share/nginx/html/assets
     ports:
       - "${FRONTEND_PORT:-80}:80"
 
