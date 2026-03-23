@@ -325,6 +325,72 @@ server.post("/auth/login", async (req, res) => {
   }
 });
 
+// POST /auth/forgot-password - send reset email (public)
+server.post("/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).send("Email es requerido");
+
+    const { rows } = await pool.query(
+      "SELECT uid FROM users WHERE email = $1 AND auth_type = 'local'", [email]
+    );
+    // Always respond success to avoid email enumeration
+    if (!rows.length) return res.status(200).json({ message: "Si el email existe, recibirás un enlace para restablecer tu contraseña." });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await pool.query(
+      "INSERT INTO password_reset_tokens (email, token, expires_at) VALUES ($1, $2, $3)",
+      [email, token, expiresAt]
+    );
+
+    const appUrl = (process.env.VITE_API_BASE_URL || "http://localhost:5000").replace("/api", "");
+    const resetLink = `${appUrl}/reset-password/${token}`;
+
+    if (emailTransporter) {
+      await emailTransporter.sendMail({
+        from: `"Lomeli Super" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: "Restablecer contraseña - Lomeli Super",
+        text: `Hola,\n\nRecibimos una solicitud para restablecer tu contraseña.\n\nHaz clic en el siguiente enlace (válido por 1 hora):\n${resetLink}\n\nSi no solicitaste esto, ignora este correo.\n\nLomeli Super`,
+        html: `<p>Hola,</p><p>Recibimos una solicitud para restablecer tu contraseña.</p><p><a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#15803d;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Restablecer contraseña</a></p><p style="color:#6b7280;font-size:13px;">Este enlace es válido por 1 hora. Si no solicitaste esto, ignora este correo.</p><p>Lomeli Super</p>`,
+      });
+    }
+
+    res.status(200).json({ message: "Si el email existe, recibirás un enlace para restablecer tu contraseña." });
+  } catch (error) {
+    console.error("Error forgot password:", error);
+    res.status(500).send("Error al procesar la solicitud");
+  }
+});
+
+// POST /auth/reset-password - reset password with token (public)
+server.post("/auth/reset-password", async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).send("Token y contraseña son requeridos");
+
+    const { rows } = await pool.query(
+      "SELECT email, expires_at, used FROM password_reset_tokens WHERE token = $1", [token]
+    );
+    if (!rows.length) return res.status(400).send("Token inválido");
+
+    const resetToken = rows[0];
+    if (resetToken.used) return res.status(400).send("Este enlace ya fue utilizado");
+    if (new Date() > new Date(resetToken.expires_at)) return res.status(400).send("Este enlace ha expirado");
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query("UPDATE users SET password_hash = $1 WHERE email = $2 AND auth_type = 'local'", [hash, resetToken.email]);
+    await pool.query("UPDATE password_reset_tokens SET used = true WHERE token = $1", [token]);
+
+    res.status(200).json({ message: "Contraseña actualizada exitosamente" });
+  } catch (error) {
+    console.error("Error reset password:", error);
+    res.status(500).send("Error al restablecer la contraseña");
+  }
+});
+
 // POST /auth/register-google - register Google user with invitation code
 server.post("/auth/register-google", authenticate, async (req, res) => {
   try {

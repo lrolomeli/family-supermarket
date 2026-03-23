@@ -11,6 +11,7 @@ import MyOrders from "./pages/MyOrders";
 import FavoritesAndHistory from "./pages/FavoritesAndHistory";
 import Admin from "./pages/Admin";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import API_BASE_URL from "./config";
 import apiFetch from "./api";
 import { SettingsProvider } from "./contexts/SettingsContext";
@@ -112,6 +113,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={isLoggedIn ? <Navigate to="/order" replace /> : <Login />} />
         <Route path="/register/:code" element={isLoggedIn ? <Navigate to="/order" replace /> : <Register />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/pending" element={<Navigate to="/login" replace />} />
         <Route path="/order" element={<PrivateRoute><Order /></PrivateRoute>} />
         <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
