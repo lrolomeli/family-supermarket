@@ -320,6 +320,51 @@ const Order = () => {
       </div>
       )}
 
+      {/* Cart (shown before list in list mode so it's visible at top) */}
+      {viewMode === "list" && cart.length > 0 && (
+        <div style={{
+          background: "#fff", borderRadius: "14px", border: "1px solid #e5e7eb",
+          overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", marginBottom: "12px",
+        }}>
+          <div style={{
+            padding: "10px 14px", background: "#f9fafb", borderBottom: "1px solid #f3f4f6",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: "13px", fontWeight: 700, color: "#374151", letterSpacing: "0.3px" }}>
+              🛒 CARRITO ({cart.length})
+            </span>
+            <span style={{ fontSize: "12px", color: "#6b7280" }}>
+              {cartTotal} {cartTotal === 1 ? "artículo" : "artículos"}
+            </span>
+          </div>
+          {cart.map((item, idx) => (
+            <div key={idx} style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              padding: "10px 14px",
+              borderBottom: idx < cart.length - 1 ? "1px solid #f3f4f6" : "none",
+            }}>
+              <img src={imgSrc(item.product.image)} alt={item.product.name}
+                style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "14px", color: "#111827", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {item.product.name}
+                </div>
+                <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                  {item.quantity} {item.unit === "pieces" ? "pz" : "kg"}
+                </div>
+              </div>
+              <button onClick={() => handleRemoveFromCart(idx)} style={{
+                background: "#fef2f2", border: "none", color: "#ef4444",
+                width: "30px", height: "30px", borderRadius: "8px",
+                fontSize: "14px", cursor: "pointer", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                WebkitTapHighlightColor: "transparent",
+              }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* List mode */}
       {viewMode === "list" && (
         <div style={{
@@ -384,8 +429,8 @@ const Order = () => {
         </div>
       )}
 
-      {/* Cart */}
-      {cart.length > 0 && (
+      {/* Cart (search mode) */}
+      {viewMode === "search" && cart.length > 0 && (
         <div style={{
           background: "#fff", borderRadius: "14px", border: "1px solid #e5e7eb",
           overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
