@@ -555,6 +555,36 @@ const Admin = () => {
 
   const getOrderRequest = (orderId) => requests.find(r => r.order_id === orderId && r.status === "pending");
 
+  const buildOrderText = (order) => {
+    const lines = [`Pedido #${order.id} — ${order.user_email?.split("@")[0]}\n`];
+    let total = 0;
+    order.products.forEach(p => {
+      const found = catalog.find(c => c.id === p.id || c.name === p.name);
+      const price = found ? (p.unit === "kg" ? Number(found.price_kg) : Number(found.price_piece)) : 0;
+      const subtotal = price * p.quantity;
+      total += subtotal;
+      lines.push(`• ${p.name} — ${p.quantity} ${p.unit === "kg" ? "kg" : "pz"} × ${formatMXN(price)} = ${formatMXN(subtotal)}`);
+    });
+    lines.push(`\nTotal: ${formatMXN(total)}`);
+    return lines.join("\n");
+  };
+
+  const handleShareOrder = async (order) => {
+    const text = buildOrderText(order);
+    if (navigator.share) {
+      try { await navigator.share({ text }); } catch (_) {}
+    } else {
+      await navigator.clipboard.writeText(text);
+      alert("Desglose copiado al portapapeles");
+    }
+  };
+
+  const handleCopyOrder = async (order) => {
+    const text = buildOrderText(order);
+    await navigator.clipboard.writeText(text);
+    alert("Copiado ✓");
+  };
+
   // --- Stats ---
   const stats = useMemo(() => {
     const total = orders.length;
@@ -740,7 +770,17 @@ const Admin = () => {
                             </span>
                           )}
                         </div>
-                        <Badge status={order.status} />
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <button onClick={(e) => { e.stopPropagation(); handleCopyOrder(order); }} style={{
+                            background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: "2px",
+                            WebkitTapHighlightColor: "transparent", lineHeight: 1,
+                          }}>📋</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleShareOrder(order); }} style={{
+                            background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: "2px",
+                            WebkitTapHighlightColor: "transparent", lineHeight: 1,
+                          }}>📤</button>
+                          <Badge status={order.status} />
+                        </div>
                       </div>
 
                       <div style={{ padding: "10px 14px" }}>
@@ -794,7 +834,7 @@ const Admin = () => {
                         ))}
 
                         {/* Status actions */}
-                        <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+                        <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap" }}>
                           {order.status === 'delivered' ? (
                             <ActionBtn onClick={() => handleStatusChange(order.id, 'pending')} bg="#f3f4f6" color="#6b7280">
                               ↩️ Reiniciar
