@@ -57,11 +57,11 @@ const TAB_ITEMS = [
   { key: "ShoppingList", label: "Compras", icon: "🛒" },
   { key: "Users", label: "Usuarios", icon: "👥" },
   { key: "Prices", label: "Productos", icon: "🏷️" },
-  { key: "Categories", label: "Categorías", icon: "📁" },
+  { key: "Categories", label: "Ajustes", icon: "⚙️" },
 ];
 
 // ─── PricesTab ───
-const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct, onToggleAvailable }) => {
+const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll, onCsvUpload, onAddProduct, onDeleteProduct, categories, onUpdateProduct, onToggleAvailable, onAddCategory }) => {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [csvStatus, setCsvStatus] = useState(null);
@@ -74,6 +74,9 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
   const [imageFile, setImageFile] = useState(null);
   const [editImageFile, setEditImageFile] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
 
   const filtered = catalog.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -182,7 +185,18 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
       )}
 
       {/* Product cards (accordion) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div onClick={() => setShowProducts(!showProducts)} style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 14px", background: "#fff", borderRadius: "12px",
+        border: "1px solid #e5e7eb", cursor: "pointer", marginBottom: showProducts ? "8px" : 0,
+        WebkitTapHighlightColor: "transparent",
+      }}>
+        <span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>
+          📦 Productos ({filtered.length})
+        </span>
+        <span style={{ fontSize: "14px", color: "#9ca3af", transform: showProducts ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
+      </div>
+      {showProducts && <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {filtered.map(product => {
           const isOpen = expandedId === product.id;
           return (
@@ -245,7 +259,42 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
             </div>
           );
         })}
+      </div>}
+
+      {/* Categories collapsible */}
+      <div onClick={() => setShowCategories(!showCategories)} style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 14px", background: "#fff", borderRadius: "12px",
+        border: "1px solid #e5e7eb", cursor: "pointer", marginTop: "8px",
+        marginBottom: showCategories ? "8px" : 0,
+        WebkitTapHighlightColor: "transparent",
+      }}>
+        <span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>
+          📁 Categorías ({categories.length})
+        </span>
+        <span style={{ fontSize: "14px", color: "#9ca3af", transform: showCategories ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
       </div>
+      {showCategories && (
+        <div>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+            <input placeholder="Nueva categoría" value={newCategory} onChange={e => setNewCategory(e.target.value)}
+              style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
+            <ActionBtn onClick={async () => { if (!newCategory.trim()) return; await onAddCategory(newCategory); setNewCategory(""); }} bg="#8b5cf6" color="#fff">
+              + Agregar
+            </ActionBtn>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {categories.map(cat => (
+              <div key={cat.id} style={{
+                background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
+                padding: "10px 14px", fontSize: "14px", fontWeight: 600, color: "#374151",
+              }}>
+                📁 {cat.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Edit Product Modal */}
       {editingProduct && (
@@ -282,47 +331,7 @@ const PricesTab = ({ catalog, editingPrices, onPriceChange, onSaveOne, onSaveAll
   );
 };
 
-// ─── CategoriesTab ───
-const CategoriesTab = ({ categories, onAddCategory }) => {
-  const [newCategory, setNewCategory] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
 
-  const handleAdd = async () => {
-    if (!newCategory.trim()) return;
-    try { await onAddCategory(newCategory); setNewCategory(""); setShowAdd(false); }
-    catch (e) { console.error("Error adding category:", e); }
-  };
-
-  return (
-    <div>
-      <button onClick={() => setShowAdd(!showAdd)} style={{
-        padding: "10px 16px", background: "#8b5cf6", color: "#fff",
-        border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, fontSize: "13px", marginBottom: "12px",
-      }}>
-        {showAdd ? "✕ Cancelar" : "+ Categoría"}
-      </button>
-
-      {showAdd && (
-        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-          <input placeholder="Nombre de categoría" value={newCategory} onChange={e => setNewCategory(e.target.value)}
-            style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "14px" }} />
-          <ActionBtn onClick={handleAdd} bg="#8b5cf6" color="#fff" style={{ flex: "0 1 auto", padding: "10px 16px" }}>Agregar</ActionBtn>
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {categories.map(cat => (
-          <div key={cat.id} style={{
-            background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-            padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>📁 {cat.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // ─── ShoppingListTab ───
 const ShoppingListTab = ({ orders, catalog }) => {
@@ -437,6 +446,7 @@ const Admin = () => {
   const [editingPrices, setEditingPrices] = useState({});
   const [invitations, setInvitations] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [showPrices, setShowPrices] = useState(true);
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
@@ -446,6 +456,7 @@ const Admin = () => {
   const fetchCategories = async () => { try { const r = await apiFetch(`${API_BASE_URL}/categories`); setCategories(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchInvitations = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/invitations`); setInvitations(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchRequests = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/requests`); setRequests(await r.json()); } catch (e) { console.error("Error:", e); } };
+  const fetchSettings = async () => { try { const r = await apiFetch(`${API_BASE_URL}/settings`); const s = await r.json(); setShowPrices(s.show_prices !== "false"); } catch (e) { console.error("Error:", e); } };
 
   const refreshCatalog = async () => {
     try {
@@ -469,7 +480,7 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    fetchOrders(); fetchUsers(); fetchCategories(); fetchInvitations(); fetchRequests(); refreshCatalog();
+    fetchOrders(); fetchUsers(); fetchCategories(); fetchInvitations(); fetchRequests(); fetchSettings(); refreshCatalog();
     const interval = setInterval(() => { fetchOrders(); fetchRequests(); }, 3 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -540,6 +551,15 @@ const Admin = () => {
   const handleAddCategory = async (categoryName) => {
     await apiFetch(`${API_BASE_URL}/admin/categories`, { method: "POST", body: JSON.stringify({ name: categoryName }) });
     await fetchCategories();
+  };
+
+  const handleToggleShowPrices = async () => {
+    const newValue = !showPrices;
+    setShowPrices(newValue);
+    await apiFetch(`${API_BASE_URL}/admin/settings`, {
+      method: "PUT",
+      body: JSON.stringify({ key: "show_prices", value: String(newValue) }),
+    });
   };
 
   const handleRequestResponse = async (requestId, status) => {
@@ -997,14 +1017,41 @@ const Admin = () => {
 
       {/* ─── PRICES ─── */}
       {tab === "Prices" && (
-        <PricesTab catalog={catalog} editingPrices={editingPrices} onPriceChange={handlePriceChange}
-          onSaveOne={handleSavePrice} onSaveAll={handleSaveAll} onCsvUpload={handleCsvUpload}
-          onAddProduct={handleAddProduct} onDeleteProduct={handleDeleteProduct}
-          onToggleAvailable={handleToggleAvailable} categories={categories} onUpdateProduct={handleUpdateProduct} />
+        <>
+          <div onClick={handleToggleShowPrices} style={{
+            display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px",
+            background: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb",
+            marginBottom: "12px", cursor: "pointer", WebkitTapHighlightColor: "transparent",
+          }}>
+            <div style={{
+              width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0,
+              border: showPrices ? "none" : "2px solid #d1d5db",
+              background: showPrices ? "#15803d" : "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {showPrices && <span style={{ color: "#fff", fontSize: "13px" }}>✓</span>}
+            </div>
+            <span style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>
+              Mostrar precios a clientes
+            </span>
+          </div>
+          <PricesTab catalog={catalog} editingPrices={editingPrices} onPriceChange={handlePriceChange}
+            onSaveOne={handleSavePrice} onSaveAll={handleSaveAll} onCsvUpload={handleCsvUpload}
+            onAddProduct={handleAddProduct} onDeleteProduct={handleDeleteProduct}
+            onToggleAvailable={handleToggleAvailable} categories={categories} onUpdateProduct={handleUpdateProduct}
+            onAddCategory={handleAddCategory} />
+        </>
       )}
 
-      {/* ─── CATEGORIES ─── */}
-      {tab === "Categories" && <CategoriesTab categories={categories} onAddCategory={handleAddCategory} />}
+      {/* ─── SETTINGS ─── */}
+      {tab === "Categories" && (
+        <div>
+          <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
+            <div style={{ fontSize: "48px", marginBottom: "8px" }}>⚙️</div>
+            <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>Ajustes (próximamente)</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -629,6 +629,35 @@ server.post("/admin/categories", authenticate, async (req, res) => {
   }
 });
 
+// GET /settings - public settings (non-admin)
+server.get("/settings", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT key, value FROM settings");
+    const settings = {};
+    rows.forEach(r => { settings[r.key] = r.value; });
+    res.status(200).json(settings);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+// PUT /admin/settings - update a setting (admin only)
+server.put("/admin/settings", authenticate, async (req, res) => {
+  try {
+    const { rows: user } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
+
+    const { key, value } = req.body;
+    await pool.query(
+      "INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+      [key, value]
+    );
+    res.status(200).json({ key, value });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 
 server.get("/admin/orders", authenticate, async (req, res) => {
   try {

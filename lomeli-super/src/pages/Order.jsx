@@ -5,7 +5,7 @@ import apiFetch from "../api";
 const imgSrc = (image) => image || "/images/default-product.svg";
 
 // Bottom sheet para seleccionar cantidad y unidad
-const ProductSheet = ({ product, onAdd, onClose }) => {
+const ProductSheet = ({ product, onAdd, onClose, showPrices }) => {
   const sellBy = product.sell_by || "both";
   const defaultUnit = sellBy === "kg" ? "kg" : "pieces";
   const [quantity, setQuantity] = useState(defaultUnit === "kg" ? 0.5 : 1);
@@ -39,7 +39,7 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
             style={{ width: "56px", height: "56px", borderRadius: "14px", objectFit: "cover", border: "1px solid #f3f4f6" }} />
           <div>
             <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#111827" }}>{product.name}</h3>
-            {price > 0 && (
+            {showPrices && price > 0 && (
               <span style={{ fontSize: "14px", color: "#15803d", fontWeight: 600 }}>
                 ${price.toFixed(2)} / {unit === "kg" ? "kg" : "pz"}
               </span>
@@ -118,6 +118,7 @@ const Order = () => {
   const [focused, setFocused] = useState(false);
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState("search"); // "search" | "list"
+  const [showPrices, setShowPrices] = useState(true);
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -129,6 +130,7 @@ const Order = () => {
         setUnavailable(all.filter(p => p.available === false));
       })
       .catch(e => console.error("Error loading products:", e));
+    fetch(`${API_BASE_URL}/settings`).then(r => r.json()).then(s => setShowPrices(s.show_prices !== "false")).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -293,11 +295,11 @@ const Order = () => {
                   style={{ width: "38px", height: "38px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "15px", color: "#111827", fontWeight: 500 }}>{p.name}</div>
-                  <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                  {showPrices && <div style={{ fontSize: "12px", color: "#9ca3af" }}>
                     {p.price_piece > 0 && `$${Number(p.price_piece).toFixed(0)}/pz`}
                     {p.price_piece > 0 && p.price_kg > 0 && " · "}
                     {p.price_kg > 0 && `$${Number(p.price_kg).toFixed(0)}/kg`}
-                  </div>
+                  </div>}
                 </div>
                 <span style={{ fontSize: "18px", color: "#d1d5db" }}>›</span>
               </div>
@@ -337,11 +339,11 @@ const Order = () => {
                   style={{ width: "40px", height: "40px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "14px", color: "#111827", fontWeight: 500 }}>{p.name}</div>
-                  <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                  {showPrices && <div style={{ fontSize: "12px", color: "#9ca3af" }}>
                     {p.price_piece > 0 && `$${Number(p.price_piece).toFixed(0)}/pz`}
                     {p.price_piece > 0 && p.price_kg > 0 && " · "}
                     {p.price_kg > 0 && `$${Number(p.price_kg).toFixed(0)}/kg`}
-                  </div>
+                  </div>}
                 </div>
                 {inCart ? (
                   <span style={{ fontSize: "11px", fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "3px 8px", borderRadius: "6px" }}>
@@ -467,6 +469,7 @@ const Order = () => {
         <ProductSheet
           product={selectedProduct}
           onAdd={handleAddToCart}
+          showPrices={showPrices}
           onClose={() => setSelectedProduct(null)}
         />
       )}
