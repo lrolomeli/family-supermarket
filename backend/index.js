@@ -734,7 +734,7 @@ server.get("/admin/orders", authenticate, async (req, res) => {
     if (!user.length || !user[0].is_admin) {
       return res.status(403).send("Unauthorized: Only admins can access this endpoint");
     }
-    const { rows } = await pool.query("SELECT o.*, u.email as user_email FROM orders o JOIN users u ON o.uid = u.uid");
+    const { rows } = await pool.query("SELECT o.*, u.email as user_email, u.display_name as user_name FROM orders o JOIN users u ON o.uid = u.uid");
     res.status(200).json(rows);
   } catch (error) {
     console.error("Error fetching all orders:", error);
@@ -1056,7 +1056,7 @@ server.get("/admin/requests", authenticate, async (req, res) => {
     if (!user.length || !user[0].is_admin) return res.status(403).send("Unauthorized");
 
     const { rows } = await pool.query(`
-      SELECT r.*, o.id as order_id, u.email as user_email, o.products
+      SELECT r.*, o.id as order_id, u.email as user_email, u.display_name as user_name, o.products
       FROM order_requests r
       JOIN orders o ON r.order_id = o.id
       JOIN users u ON r.uid = u.uid

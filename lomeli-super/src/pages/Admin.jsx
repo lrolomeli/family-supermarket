@@ -576,7 +576,7 @@ const Admin = () => {
   const getOrderRequest = (orderId) => requests.find(r => r.order_id === orderId && r.status === "pending");
 
   const buildOrderText = (order) => {
-    const lines = [`Pedido #${order.id} — ${order.user_email?.split("@")[0]}\n`];
+    const lines = [`Pedido #${order.id} — ${order.user_name || order.user_email?.split("@")[0]}\n`];
     let total = 0;
     order.products.forEach(p => {
       const found = catalog.find(c => c.id === p.id || c.name === p.name);
@@ -627,11 +627,15 @@ const Admin = () => {
 
   const ordersPerUser = useMemo(() => {
     const counts = {};
-    orders.forEach(o => { const email = o.user_email?.split("@")[0] || o.uid; counts[email] = (counts[email] || 0) + 1; });
+    orders.forEach(o => { const email = o.user_name || o.user_email?.split("@")[0] || o.uid; counts[email] = (counts[email] || 0) + 1; });
     return Object.entries(counts).map(([name, count]) => ({ name, count }));
   }, [orders]);
 
-  const uniqueUsers = useMemo(() => [...new Set(orders.map(o => o.user_email))], [orders]);
+  const uniqueUsers = useMemo(() => {
+    const map = {};
+    orders.forEach(o => { if (o.user_email && !map[o.user_email]) map[o.user_email] = o.user_name || null; });
+    return Object.entries(map).map(([email, name]) => ({ email, name }));
+  }, [orders]);
   const filteredOrders = useMemo(() => orders.filter(o => {
     const status = o.status || "pending";
     let statusMatch;
@@ -749,7 +753,7 @@ const Admin = () => {
             <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
               style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "13px", background: "#f9fafb" }}>
               <option value="all">Todos</option>
-              {uniqueUsers.map(u => <option key={u} value={u}>{u?.split("@")[0]}</option>)}
+              {uniqueUsers.map(u => <option key={u.email} value={u.email}>{u.name || u.email?.split("@")[0]}</option>)}
             </select>
           </div>
 
@@ -762,7 +766,7 @@ const Admin = () => {
             Object.entries(ordersByUser).map(([email, userOrders]) => (
               <div key={email} style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "12px", color: "#9ca3af", fontWeight: 600, marginBottom: "8px", letterSpacing: "0.3px" }}>
-                  👤 {email?.split("@")[0]} — {userOrders.length} {userOrders.length > 1 ? "órdenes" : "orden"}
+                  👤 {userOrders[0]?.user_name || email?.split("@")[0]} — {userOrders.length} {userOrders.length > 1 ? "órdenes" : "orden"}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {userOrders.map(order => {
@@ -811,7 +815,7 @@ const Admin = () => {
                             padding: "10px 12px", marginBottom: "10px",
                           }}>
                             <div style={{ fontSize: "12px", fontWeight: 700, color: "#dc2626", marginBottom: "6px" }}>
-                              📝 {pendingReq.request_type === "modify" ? "Solicita modificar" : pendingReq.request_type === "cancel" ? "Solicita cancelar" : "Solicitud"} — {pendingReq.user_email?.split("@")[0]}
+                              📝 {pendingReq.request_type === "modify" ? "Solicita modificar" : pendingReq.request_type === "cancel" ? "Solicita cancelar" : "Solicitud"} — {pendingReq.user_name || pendingReq.user_email?.split("@")[0]}
                             </div>
                             {pendingReq.message && (
                               <p style={{ margin: "0 0 8px", fontSize: "12px", color: "#374151", fontStyle: "italic" }}>
