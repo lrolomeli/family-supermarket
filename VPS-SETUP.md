@@ -102,13 +102,13 @@ docker compose --env-file .env.production up -d db
 sleep 5
 
 # Crear la DB si no existe
-docker compose exec db psql -U postgres -c "CREATE DATABASE lomeli_super;"
+docker compose --env-file .env.production exec db psql -U postgres -c "CREATE DATABASE lomeli_super;"
 
 # Restaurar
-cat /tmp/backup.sql | docker compose exec -T db psql -U postgres -d lomeli_super
+cat /tmp/backup.sql | docker compose --env-file .env.production exec -T db psql -U postgres -d lomeli_super
 
 # Verificar
-docker compose exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM users;"
+docker compose --env-file .env.production exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM users;"
 ```
 
 Si es un despliegue nuevo (sin datos previos), salta este paso — `setup.js` creará todo al arrancar.
@@ -202,10 +202,10 @@ docker compose --env-file .env.production up -d --build
 docker compose --env-file .env.production up -d --build frontend
 
 # Acceder a la DB
-docker compose exec db psql -U postgres -d lomeli_super
+docker compose --env-file .env.production exec db psql -U postgres -d lomeli_super
 
 # Backup manual de la DB
-docker compose exec -T db pg_dump -U postgres lomeli_super > backup-$(date +%Y%m%d).sql
+docker compose --env-file .env.production exec -T db pg_dump -U postgres lomeli_super > backup-$(date +%Y%m%d).sql
 ```
 
 ## Backups automáticos (recomendado)
@@ -218,7 +218,7 @@ mkdir -p ~/backups
 crontab -e
 
 # Backup diario a las 3am + limpiar backups de más de 30 días
-0 3 * * * cd ~/family-supermarket && docker compose exec -T db pg_dump -U postgres lomeli_super > ~/backups/backup-$(date +\%Y\%m\%d).sql 2>/dev/null
+0 3 * * * cd ~/family-supermarket && docker compose --env-file .env.production exec -T db pg_dump -U postgres lomeli_super > ~/backups/backup-$(date +\%Y\%m\%d).sql 2>/dev/null
 0 4 * * * find ~/backups/ -name "backup-*.sql" -mtime +30 -delete
 ```
 

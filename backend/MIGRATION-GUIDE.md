@@ -24,7 +24,7 @@ Conectarte al servidor actual y exportar la base de datos completa:
 cd /ruta/al/proyecto
 
 # Exportar toda la DB (esquema + datos)
-docker compose exec db pg_dump -U postgres lomeli_super > backup-$(date +%Y%m%d).sql
+docker compose --env-file .env.production exec -T db pg_dump -U postgres lomeli_super > backup-$(date +%Y%m%d).sql
 
 # Verificar que el archivo tiene contenido
 ls -lh backup-*.sql
@@ -71,24 +71,24 @@ docker compose --env-file .env.production up -d db
 sleep 5
 
 # 6. Verificar que la DB está corriendo
-docker compose exec db psql -U postgres -c "SELECT 1;"
+docker compose --env-file .env.production exec db psql -U postgres -c "SELECT 1;"
 ```
 
 ## Paso 4: Restaurar el backup
 
 ```bash
 # Restaurar el backup en la DB del servidor nuevo
-cat /tmp/backup-20260323.sql | docker compose exec -T db psql -U postgres -d lomeli_super
+cat /tmp/backup-20260323.sql | docker compose --env-file .env.production exec -T db psql -U postgres -d lomeli_super
 ```
 
 Si la base de datos `lomeli_super` no existe aún:
 
 ```bash
 # Crear la DB primero
-docker compose exec db psql -U postgres -c "CREATE DATABASE lomeli_super;"
+docker compose --env-file .env.production exec db psql -U postgres -c "CREATE DATABASE lomeli_super;"
 
 # Luego restaurar
-cat /tmp/backup-20260323.sql | docker compose exec -T db psql -U postgres -d lomeli_super
+cat /tmp/backup-20260323.sql | docker compose --env-file .env.production exec -T db psql -U postgres -d lomeli_super
 ```
 
 ## Paso 5: Levantar la aplicación completa
@@ -108,9 +108,9 @@ Al arrancar, el backend ejecutará `setup.js` que:
 
 ```bash
 # Verificar que los datos están
-docker compose exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM users;"
-docker compose exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM orders;"
-docker compose exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM products;"
+docker compose --env-file .env.production exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM users;"
+docker compose --env-file .env.production exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM orders;"
+docker compose --env-file .env.production exec db psql -U postgres -d lomeli_super -c "SELECT COUNT(*) FROM products;"
 
 # Verificar logs del backend
 docker compose logs backend
@@ -196,7 +196,7 @@ Para no depender de hacer el backup manualmente antes de migrar, puedes programa
 crontab -e
 
 # Agregar backup diario a las 3am
-0 3 * * * cd /ruta/al/proyecto && docker compose exec -T db pg_dump -U postgres lomeli_super > /ruta/backups/backup-$(date +\%Y\%m\%d).sql 2>/dev/null
+0 3 * * * cd /ruta/al/proyecto && docker compose --env-file .env.production exec -T db pg_dump -U postgres lomeli_super > /ruta/backups/backup-$(date +\%Y\%m\%d).sql 2>/dev/null
 
 # Opcional: borrar backups de más de 30 días
 0 4 * * * find /ruta/backups/ -name "backup-*.sql" -mtime +30 -delete

@@ -93,11 +93,11 @@ docker compose --env-file .env.production up -d --build frontend
 docker compose logs -f backend
 
 # Acceder a la DB en producción
-docker compose exec db psql -U postgres -d lomeli_super
+docker compose --env-file .env.production exec db psql -U postgres -d lomeli_super
 
 # Backup de la DB
-docker compose exec db pg_dump -U postgres lomeli_super > backup.sql
+docker compose --env-file .env.production exec -T db pg_dump -U postgres lomeli_super > backup.sql
 
 # Restaurar backup
-cat backup.sql | docker compose exec -T db psql -U postgres -d lomeli_super
+cat backup.sql | docker compose --env-file .env.production exec -T db psql -U postgres -d lomeli_super
 ```
