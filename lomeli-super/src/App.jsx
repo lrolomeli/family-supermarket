@@ -13,6 +13,7 @@ import Admin from "./pages/Admin";
 import Register from "./pages/Register";
 import API_BASE_URL from "./config";
 import apiFetch from "./api";
+import { SettingsProvider } from "./contexts/SettingsContext";
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -105,6 +106,7 @@ const App = () => {
     ) : <Navigate to="/" />;
 
   return (
+    <SettingsProvider>
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
@@ -117,6 +119,7 @@ const App = () => {
         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
       </Routes>
     </Router>
+    </SettingsProvider>
   );
 };
 

@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
+import { useSettings } from "../contexts/SettingsContext";
+import Price from "../components/Price";
 
 const imgSrc = (image) => image || "/images/default-product.svg";
 
 // Bottom sheet para seleccionar cantidad y unidad
-const ProductSheet = ({ product, onAdd, onClose, showPrices }) => {
+const ProductSheet = ({ product, onAdd, onClose }) => {
+  const { showPrices } = useSettings();
   const sellBy = product.sell_by || "both";
   const defaultUnit = sellBy === "kg" ? "kg" : "pieces";
   const [quantity, setQuantity] = useState(defaultUnit === "kg" ? 0.5 : 1);
@@ -118,7 +121,7 @@ const Order = () => {
   const [focused, setFocused] = useState(false);
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState("search"); // "search" | "list"
-  const [showPrices, setShowPrices] = useState(true);
+  const { showPrices } = useSettings();
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -130,7 +133,6 @@ const Order = () => {
         setUnavailable(all.filter(p => p.available === false));
       })
       .catch(e => console.error("Error loading products:", e));
-    fetch(`${API_BASE_URL}/settings`).then(r => r.json()).then(s => setShowPrices(s.show_prices !== "false")).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -514,7 +516,6 @@ const Order = () => {
         <ProductSheet
           product={selectedProduct}
           onAdd={handleAddToCart}
-          showPrices={showPrices}
           onClose={() => setSelectedProduct(null)}
         />
       )}

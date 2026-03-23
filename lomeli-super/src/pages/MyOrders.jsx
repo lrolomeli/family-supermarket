@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { auth } from "../firebase";
 import API_BASE_URL from "../config";
 import apiFetch from "../api";
-import { calcOrderTotal, formatMXN } from "../utils/pricing";
+import { calcOrderTotal } from "../utils/pricing";
+import Price from "../components/Price";
 
 const STATUS_COLORS = {
   pending:     { bg: "#fffbeb", color: "#d97706", label: "Pendiente", icon: "🕐" },
@@ -46,14 +47,12 @@ const MyOrders = () => {
   const [success, setSuccess] = useState("");
   const [notification, setNotification] = useState(null);
   const [productCatalog, setProductCatalog] = useState([]);
-  const [showPrices, setShowPrices] = useState(true);
 
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => setProductCatalog(data))
       .catch(console.error);
-    fetch(`${API_BASE_URL}/settings`).then(r => r.json()).then(s => setShowPrices(s.show_prices !== "false")).catch(() => {});
   }, []);
 
   const firebaseUser = auth.currentUser;
@@ -351,10 +350,8 @@ const MyOrders = () => {
                     )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {showPrices && total !== null && (
-                      <span style={{ fontWeight: 700, color: "#15803d", fontSize: "14px" }}>
-                        {formatMXN(total)}
-                      </span>
+                    {total !== null && (
+                      <Price value={total} style={{ fontWeight: 700, color: "#15803d", fontSize: "14px" }} />
                     )}
                     <StatusBadge status={order.status} />
                   </div>
