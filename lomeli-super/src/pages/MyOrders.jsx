@@ -46,12 +46,14 @@ const MyOrders = () => {
   const [success, setSuccess] = useState("");
   const [notification, setNotification] = useState(null);
   const [productCatalog, setProductCatalog] = useState([]);
+  const [showPrices, setShowPrices] = useState(true);
 
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/products`)
       .then(r => r.json())
       .then(data => setProductCatalog(data))
       .catch(console.error);
+    fetch(`${API_BASE_URL}/settings`).then(r => r.json()).then(s => setShowPrices(s.show_prices !== "false")).catch(() => {});
   }, []);
 
   const firebaseUser = auth.currentUser;
@@ -349,7 +351,7 @@ const MyOrders = () => {
                     )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {total !== null && (
+                    {showPrices && total !== null && (
                       <span style={{ fontWeight: 700, color: "#15803d", fontSize: "14px" }}>
                         {formatMXN(total)}
                       </span>

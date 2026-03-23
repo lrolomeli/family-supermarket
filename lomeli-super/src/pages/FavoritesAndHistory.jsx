@@ -27,6 +27,7 @@ const FavoritesAndHistory = () => {
   const [favorites, setFavorites] = useState([]);
   const [orderHistory, setOrderHistory] = useState([]);
   const [productCatalog, setProductCatalog] = useState([]);
+  const [showPrices, setShowPrices] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -45,6 +46,7 @@ const FavoritesAndHistory = () => {
       .then(r => r.json())
       .then(data => setProductCatalog(data))
       .catch(console.error);
+    fetch(`${API_BASE_URL}/settings`).then(r => r.json()).then(s => setShowPrices(s.show_prices !== "false")).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -254,7 +256,7 @@ const FavoritesAndHistory = () => {
                         </div>
                       )}
                     </div>
-                    {total !== null && (
+                    {showPrices && total !== null && (
                       <span style={{ fontWeight: 700, color: "#15803d", fontSize: "14px" }}>
                         {formatMXN(total)}
                       </span>
@@ -329,7 +331,7 @@ const FavoritesAndHistory = () => {
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {total !== null && (
+                      {showPrices && total !== null && (
                         <span style={{ fontWeight: 700, color: "#15803d", fontSize: "14px" }}>
                           {formatMXN(total)}
                         </span>
