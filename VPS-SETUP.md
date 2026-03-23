@@ -176,7 +176,17 @@ sudo systemctl restart nginx
 
 En Cloudflare (o tu proveedor DNS), actualiza el registro A de `super.luisrlp.com` para que apunte a la IP del VPS nuevo.
 
-## 10. Verificar desde el navegador
+Para obtener la IP pública del VPS:
+
+```bash
+curl ifconfig.me
+```
+
+## 10. Autorizar dominio/IP en Firebase
+
+En la consola de Firebase → Authentication → Settings → Authorized domains, agrega el dominio o la IP pública del VPS nuevo para que los logins funcionen.
+
+## 11. Verificar desde el navegador
 
 Abre `https://super.luisrlp.com` y verifica que todo funcione.
 
@@ -233,5 +243,6 @@ crontab -e
 - [ ] `docker compose up -d --build` exitoso
 - [ ] nginx configurado como proxy
 - [ ] DNS actualizado
+- [ ] Dominio/IP autorizado en Firebase
 - [ ] App accesible desde el dominio
 - [ ] Backups automáticos configurados

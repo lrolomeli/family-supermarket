@@ -172,6 +172,16 @@ sudo systemctl restart nginx
 
 Si el servidor nuevo tiene una IP diferente, actualiza el registro A en Cloudflare (o tu proveedor DNS) para que `super.luisrlp.com` apunte a la nueva IP.
 
+Para obtener la IP pública del VPS:
+
+```bash
+curl ifconfig.me
+```
+
+## Paso 9: Autorizar dominio/IP en Firebase
+
+En la consola de Firebase → Authentication → Settings → Authorized domains, agrega el dominio o la IP pública del servidor nuevo. Sin esto, los logins (Google y local) no funcionarán.
+
 ---
 
 ## Checklist rápido
