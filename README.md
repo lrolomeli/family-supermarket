@@ -154,19 +154,9 @@ Si usas Google Sign-In, el email que coincida con `VITE_ADMIN_EMAIL` se promueve
 
 ### 7. Notificaciones por email (opcional)
 
-El admin recibe un email cuando un usuario crea una orden o solicita un cambio. Para activarlo, agrega en `.env.production`:
+La app envía emails para notificaciones al admin y restablecimiento de contraseña. Ver **[SMTP-SETUP.md](SMTP-SETUP.md)** para la guía completa de configuración.
 
-```env
-SMTP_USER=tu-correo@gmail.com
-SMTP_PASS=tu-app-password
-```
-
-Necesitas generar un "App Password" en Google (no uses tu contraseña normal):
-1. Ve a https://myaccount.google.com/apppasswords
-2. Genera una contraseña para "Mail"
-3. Usa esa contraseña en `SMTP_PASS`
-
-Si no configuras estas variables, la app funciona normal sin enviar emails.
+Si no configuras SMTP, la app funciona normal sin enviar emails.
 
 ---
 
