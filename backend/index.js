@@ -345,7 +345,7 @@ server.post("/auth/forgot-password", async (req, res) => {
       [email, token, expiresAt]
     );
 
-    const appUrl = (process.env.VITE_API_BASE_URL || "http://localhost:5000").replace("/api", "");
+    const appUrl = process.env.APP_URL || (process.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5000";
     const resetLink = `${appUrl}/reset-password/${token}`;
 
     if (emailTransporter) {
