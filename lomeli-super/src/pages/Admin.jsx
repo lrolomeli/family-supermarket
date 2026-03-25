@@ -491,6 +491,12 @@ const Admin = () => {
     await fetchUsers();
   };
 
+  const handleToggleAdmin = async (uid, isAdmin) => {
+    if (!confirm(isAdmin ? "¿Hacer administrador a este usuario?" : "¿Quitar permisos de administrador?")) return;
+    await apiFetch(`${API_BASE_URL}/admin/users/${uid}/admin`, { method: "PATCH", body: JSON.stringify({ is_admin: isAdmin }) });
+    await fetchUsers();
+  };
+
   const handleDeliverOrder = async (orderId) => {
     if (confirm("¿Marcar como entregado?")) {
       try { await apiFetch(`${API_BASE_URL}/admin/orders/${orderId}/status`, { method: "PUT", body: JSON.stringify({ status: 'delivered' }) }); await fetchOrders(); }
@@ -1026,6 +1032,20 @@ const Admin = () => {
                       border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
                       WebkitTapHighlightColor: "transparent",
                     }}>Aprobar</button>
+                  )}
+                  {u.is_approved && !u.is_admin && (
+                    <button onClick={() => handleToggleAdmin(u.uid, true)} style={{
+                      padding: "8px 14px", background: "#ede9fe", color: "#7c3aed",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                      WebkitTapHighlightColor: "transparent",
+                    }}>👑 Admin</button>
+                  )}
+                  {u.is_admin && (
+                    <button onClick={() => handleToggleAdmin(u.uid, false)} style={{
+                      padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
+                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                      WebkitTapHighlightColor: "transparent",
+                    }}>Quitar Admin</button>
                   )}
                   {u.is_approved && !u.is_admin && (
                     <button onClick={() => handleApprove(u.uid, false)} style={{
