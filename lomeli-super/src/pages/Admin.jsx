@@ -649,6 +649,7 @@ const Admin = () => {
   const ordersByUser = useMemo(() => {
     const groups = {};
     filteredOrders.forEach(o => { const key = o.user_email || o.uid; if (!groups[key]) groups[key] = []; groups[key].push(o); });
+    Object.values(groups).forEach(arr => arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     return groups;
   }, [filteredOrders]);
 
@@ -868,6 +869,11 @@ const Admin = () => {
                               {order.status === 'pending' && (
                                 <ActionBtn onClick={() => handleStatusChange(order.id, 'in_progress')} bg="#eff6ff" color="#2563eb">
                                   📦 Progreso
+                                </ActionBtn>
+                              )}
+                              {order.status === 'in_progress' && (
+                                <ActionBtn onClick={() => handleStatusChange(order.id, 'pending')} bg="#fffbeb" color="#d97706">
+                                  🕐 Pendiente
                                 </ActionBtn>
                               )}
                               {(order.status === 'pending' || order.status === 'in_progress') && (
