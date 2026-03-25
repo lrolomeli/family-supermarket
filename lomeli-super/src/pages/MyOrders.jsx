@@ -122,9 +122,18 @@ const MyOrders = () => {
 
   const handleProductChange = (index, field, value) => {
     setEditedProducts(prev =>
-      prev.map((p, i) =>
-        i === index ? { ...p, [field]: field === "quantity" ? Number(value) : value } : p
-      )
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        if (field === "quantity") {
+          const num = Number(value);
+          return { ...p, quantity: p.unit === "pieces" ? Math.round(num) : num };
+        }
+        if (field === "unit") {
+          const newQty = value === "pieces" ? Math.max(1, Math.round(p.quantity)) : p.quantity;
+          return { ...p, unit: value, quantity: newQty };
+        }
+        return { ...p, [field]: value };
+      })
     );
   };
 
@@ -374,7 +383,7 @@ const MyOrders = () => {
                             {product.name}
                           </span>
                           <input
-                            type="number" min="0.5" step="0.5" value={product.quantity}
+                            type="number" min={product.unit === "kg" ? "0.5" : "1"} step={product.unit === "kg" ? "0.5" : "1"} value={product.quantity}
                             onChange={e => handleProductChange(index, "quantity", e.target.value)}
                             style={{
                               width: "50px", padding: "6px 4px", borderRadius: "8px",
