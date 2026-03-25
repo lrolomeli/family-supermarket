@@ -114,7 +114,12 @@ const Order = () => {
   const [products, setProducts] = useState([]);
   const [unavailable, setUnavailable] = useState([]);
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem("cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -147,6 +152,10 @@ const Order = () => {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
 
   const filtered = search.trim()
     ? products.filter(p => normalize(p.name).includes(normalize(search)))
@@ -190,6 +199,7 @@ const Order = () => {
       });
       if (!res.ok) throw new Error("Error al enviar orden");
       setCart([]);
+      localStorage.removeItem("cart");
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 2500);
     } catch (e) {
