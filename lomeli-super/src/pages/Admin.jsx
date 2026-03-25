@@ -1011,7 +1011,7 @@ const Admin = () => {
           <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
             <h4 style={{ margin: "0 0 10px", fontSize: "15px", fontWeight: 700, color: "#111827" }}>👥 Usuarios Registrados</h4>
             <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "10px" }}>
-              Aprueba o rechaza el acceso de cada usuario.
+              Administra los roles y acceso de cada usuario.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {users.map(u => {
@@ -1044,20 +1044,6 @@ const Admin = () => {
                   </div>
                   {isEditing && (
                     <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap" }}>
-                      {!u.is_approved && (
-                        <button onClick={async () => { await handleApprove(u.uid, true); setEditingUserId(null); }} style={{
-                          padding: "8px 14px", background: "#f0fdf4", color: "#15803d",
-                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-                          WebkitTapHighlightColor: "transparent",
-                        }}>✅ Aprobar</button>
-                      )}
-                      {u.is_approved && !u.is_admin && (
-                        <button onClick={async () => { await handleApprove(u.uid, false); setEditingUserId(null); }} style={{
-                          padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
-                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-                          WebkitTapHighlightColor: "transparent",
-                        }}>🚫 Revocar acceso</button>
-                      )}
                       {u.is_approved && !u.is_admin && (
                         <button onClick={async () => { await handleToggleAdmin(u.uid, true); setEditingUserId(null); }} style={{
                           padding: "8px 14px", background: "#ede9fe", color: "#7c3aed",
@@ -1071,6 +1057,13 @@ const Admin = () => {
                           border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
                           WebkitTapHighlightColor: "transparent",
                         }}>🔽 Quitar Admin</button>
+                      )}
+                      {!u.is_admin && (
+                        <button onClick={async () => { if (!confirm("¿Dar de baja a este usuario? No podrá acceder a la app.")) return; await handleApprove(u.uid, false); setEditingUserId(null); }} style={{
+                          padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                          WebkitTapHighlightColor: "transparent",
+                        }}>🚫 Dar de baja</button>
                       )}
                     </div>
                   )}
