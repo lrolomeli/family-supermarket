@@ -105,9 +105,9 @@ const Login = () => {
         display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
         maxWidth: "360px", width: "100%", boxSizing: "border-box",
       }}>
-        <div style={{ fontSize: "44px", lineHeight: 1 }}>🥦</div>
+        <img src="/images/logo.svg" alt="Ahí te encargo" style={{ width: "64px", height: "64px" }} />
         <h1 style={{ margin: 0, fontSize: "26px", fontWeight: 800, color: "#15803d", letterSpacing: "-0.5px" }}>
-          Lomeli Super
+          Ahí te encargo
         </h1>
         <p style={{ margin: 0, color: "#6b7280", fontSize: "14px", textAlign: "center" }}>
           Haz tu pedido de despensa fácil y rápido

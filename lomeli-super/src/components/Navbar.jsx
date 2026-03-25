@@ -35,7 +35,7 @@ const Navbar = ({ user, isAdmin }) => {
         padding: "10px 16px", background: "#fff", borderBottom: "1px solid #f3f4f6",
       }}>
         <span style={{ fontSize: "15px", fontWeight: 600, color: "#15803d" }}>
-          🥦 Lomeli Super
+          🛒 Ahí te encargo
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "12px", color: "#6b7280", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
