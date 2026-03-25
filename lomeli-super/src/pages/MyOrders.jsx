@@ -383,7 +383,7 @@ const MyOrders = () => {
                             {product.name}
                           </span>
                           <input
-                            type="number" min={product.unit === "kg" ? "0.5" : "1"} step={product.unit === "kg" ? "0.5" : "1"} value={product.quantity}
+                            type="number" min={product.unit === "kg" ? "0.25" : "1"} step={product.unit === "kg" ? "0.25" : "1"} value={product.quantity}
                             onChange={e => handleProductChange(index, "quantity", e.target.value)}
                             style={{
                               width: "50px", padding: "6px 4px", borderRadius: "8px",

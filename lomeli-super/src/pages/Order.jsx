@@ -11,7 +11,7 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
   const { showPrices } = useSettings();
   const sellBy = product.sell_by || "both";
   const defaultUnit = sellBy === "kg" ? "kg" : "pieces";
-  const [quantity, setQuantity] = useState(defaultUnit === "kg" ? 0.5 : 1);
+  const [quantity, setQuantity] = useState(defaultUnit === "kg" ? 0.25 : 1);
   const [unit, setUnit] = useState(defaultUnit);
   const unitOptions = sellBy === "both" ? ["pieces", "kg"] : [sellBy];
 
@@ -54,7 +54,7 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
         {unitOptions.length > 1 && (
           <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             {unitOptions.map(u => (
-              <button key={u} onClick={() => { setUnit(u); setQuantity(u === "kg" ? 0.5 : 1); }} style={{
+              <button key={u} onClick={() => { setUnit(u); setQuantity(u === "kg" ? 0.25 : 1); }} style={{
                 flex: 1, padding: "10px", borderRadius: "10px", border: "2px solid",
                 borderColor: unit === u ? "#15803d" : "#e5e7eb",
                 background: unit === u ? "#f0fdf4" : "#fff",
@@ -78,7 +78,7 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: "20px", marginBottom: "20px", padding: "8px 0",
         }}>
-          <button onClick={() => { const step = unit === "kg" ? 0.5 : 1; const min = unit === "kg" ? 0.5 : 1; setQuantity(q => Math.max(min, +(q - step).toFixed(1))); }} style={{
+          <button onClick={() => { const step = unit === "kg" ? 0.25 : 1; const min = unit === "kg" ? 0.25 : 1; setQuantity(q => Math.max(min, +(q - step).toFixed(2))); }} style={{
             width: "44px", height: "44px", borderRadius: "50%", border: "2px solid #e5e7eb",
             background: "#fff", fontSize: "20px", cursor: "pointer", color: "#374151",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -87,7 +87,7 @@ const ProductSheet = ({ product, onAdd, onClose }) => {
           <span style={{ fontSize: "32px", fontWeight: 700, color: "#111827", minWidth: "70px", textAlign: "center" }}>
             {quantity}{unit === "kg" ? " kg" : ""}
           </span>
-          <button onClick={() => { const step = unit === "kg" ? 0.5 : 1; setQuantity(q => +(q + step).toFixed(1)); }} style={{
+          <button onClick={() => { const step = unit === "kg" ? 0.25 : 1; setQuantity(q => +(q + step).toFixed(2)); }} style={{
             width: "44px", height: "44px", borderRadius: "50%", border: "none",
             background: "#15803d", fontSize: "20px", cursor: "pointer", color: "#fff",
             display: "flex", alignItems: "center", justifyContent: "center",
