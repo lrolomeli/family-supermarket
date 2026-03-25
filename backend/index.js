@@ -54,12 +54,13 @@ const emailTransporter = process.env.SMTP_USER ? nodemailer.createTransport({
 
 const sendAdminEmail = async (subject, text) => {
   if (!emailTransporter) return;
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.VITE_ADMIN_EMAIL;
-  if (!adminEmail) return;
   try {
+    const { rows } = await pool.query("SELECT email FROM users WHERE is_admin = true");
+    const emails = rows.map(r => r.email).filter(Boolean);
+    if (!emails.length) return;
     await emailTransporter.sendMail({
       from: `"Ay! Te Encargo" <${process.env.SMTP_USER}>`,
-      to: adminEmail,
+      bcc: emails,
       subject,
       text,
     });
