@@ -1,5 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <circle cx="60" cy="60" r="56" fill="#15803d"/>
-  <text x="60" y="68" text-anchor="middle" font-size="40" font-weight="bold" fill="#fff" font-family="system-ui, sans-serif">ATE</text>
-  <text x="60" y="90" text-anchor="middle" font-size="12" fill="#86efac" font-family="system-ui, sans-serif">Ay! Te Encargo</text>
+<svg width="250" height="250" viewBox="0 0 250 250" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .text-title {
+      font-family: 'Montserrat', 'Helvetica Neue', 'Arial', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+    }
+  </style>
+
+  <g transform="translate(125, 100)">
+    <circle cx="0" cy="0" r="75" fill="#15803d"/>
+    
+    <g transform="translate(-32, -30) scale(1.1)">
+      <path d="M10 10 H50 L45 40 H15 L10 10 Z" fill="#ffffff"/>
+      <path d="M10 10 L5 0 H0" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="18" cy="48" r="5" fill="#ffffff"/>
+      <circle cx="42" cy="48" r="5" fill="#ffffff"/>
+      <line x1="20" y1="18" x2="42" y2="18" stroke="#15803d" stroke-width="2"/>
+      <line x1="22" y1="26" x2="40" y2="26" stroke="#15803d" stroke-width="2"/>
+    </g>
+  </g>
+
+  <text x="125" y="210" class="text-title" fill="#15803d" text-anchor="middle">
+    Ay<tspan fill="#dc2626">!</tspan> Te Encargo
+  </text>
+  
 </svg>
