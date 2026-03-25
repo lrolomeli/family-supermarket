@@ -1059,7 +1059,7 @@ const Admin = () => {
                         }}>🔽 Quitar Admin</button>
                       )}
                       {!u.is_admin && (
-                        <button onClick={async () => { if (!confirm("¿Dar de baja a este usuario? No podrá acceder a la app.")) return; await handleApprove(u.uid, false); setEditingUserId(null); }} style={{
+                        <button onClick={async () => { if (!confirm(`¿Dar de baja a ${u.email}? Se eliminarán todas sus órdenes, favoritos e historial. Esta acción no se puede deshacer.`)) return; await apiFetch(`${API_BASE_URL}/admin/users/${u.uid}`, { method: "DELETE" }); setEditingUserId(null); await fetchUsers(); }} style={{
                           padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
                           border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
                           WebkitTapHighlightColor: "transparent",

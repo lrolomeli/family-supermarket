@@ -497,6 +497,20 @@ server.patch("/admin/users/:uid/admin", authenticate, async (req, res) => {
   }
 });
 
+// DELETE /admin/users/:uid - delete user and all their data
+server.delete("/admin/users/:uid", authenticate, async (req, res) => {
+  try {
+    const { rows: admin } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
+    if (!admin.length || !admin[0].is_admin) return res.status(403).send("Unauthorized");
+    if (req.user.uid === req.params.uid) return res.status(400).send("No puedes eliminarte a ti mismo");
+    const { rows } = await pool.query("DELETE FROM users WHERE uid = $1 RETURNING email", [req.params.uid]);
+    if (!rows.length) return res.status(404).send("Usuario no encontrado");
+    res.status(200).json({ message: "Usuario eliminado", email: rows[0].email });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 
 server.get("/products", async (req, res) => {
   try {
