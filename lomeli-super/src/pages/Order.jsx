@@ -123,6 +123,7 @@ const Order = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [toastMsg, setToastMsg] = useState("✅ Orden enviada");
   const [focused, setFocused] = useState(false);
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState("search"); // "search" | "list"
@@ -200,6 +201,7 @@ const Order = () => {
       if (!res.ok) throw new Error("Error al enviar orden");
       setCart([]);
       localStorage.removeItem("cart");
+      setToastMsg("Orden enviada");
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 2500);
     } catch (e) {
@@ -207,6 +209,32 @@ const Order = () => {
       alert("Error al enviar la orden. Intenta de nuevo.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSaveAsFavorite = async () => {
+    if (cart.length === 0) return;
+    const name = prompt("Nombre para este favorito:", `Favorito ${new Date().toLocaleDateString("es-MX")}`);
+    if (!name) return;
+    try {
+      const products = cart.map(i => ({
+        product_id: i.product.id,
+        name: i.product.name,
+        quantity: i.quantity,
+        unit: i.unit,
+        image: i.product.image || null,
+      }));
+      const res = await apiFetch(`${API_BASE_URL}/favorites`, {
+        method: "POST",
+        body: JSON.stringify({ name, products }),
+      });
+      if (res.ok) {
+        setToastMsg("Guardado en favoritos");
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 2500);
+      }
+    } catch (e) {
+      console.error("Save favorite error:", e);
     }
   };
 
@@ -223,7 +251,7 @@ const Order = () => {
           display: "flex", alignItems: "center", gap: "8px",
           animation: "toastIn 0.3s ease",
         }}>
-          ✅ Orden enviada
+          ✅ {toastMsg}
         </div>
       )}
       {/* Header */}
@@ -532,6 +560,19 @@ const Order = () => {
             }}
           >
             {storeClosed ? "🔒 Negocio cerrado" : submitting ? "Enviando..." : `Confirmar Orden (${cart.length} productos)`}
+          </button>
+          <button
+            onClick={handleSaveAsFavorite}
+            style={{
+              width: "100%", maxWidth: "600px", margin: "8px auto 0", display: "block",
+              padding: "12px", background: "#fff", color: "#d97706",
+              border: "1.5px solid #fde68a", borderRadius: "14px",
+              fontSize: "14px", fontWeight: 600, cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              pointerEvents: "auto",
+            }}
+          >
+            ⭐ Guardar como favorito
           </button>
         </div>
       )}
