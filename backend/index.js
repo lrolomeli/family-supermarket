@@ -488,6 +488,7 @@ server.patch("/admin/users/:uid/admin", authenticate, async (req, res) => {
   try {
     const { rows: admin } = await pool.query("SELECT is_admin FROM users WHERE uid = $1", [req.user.uid]);
     if (!admin.length || !admin[0].is_admin) return res.status(403).send("Unauthorized");
+    if (req.user.uid === req.params.uid) return res.status(400).send("No puedes modificar tu propio rol de administrador");
     const { is_admin } = req.body;
     await pool.query("UPDATE users SET is_admin = $1, is_approved = true WHERE uid = $2", [is_admin, req.params.uid]);
     res.status(200).send("User updated");

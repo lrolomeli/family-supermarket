@@ -439,6 +439,10 @@ const ShoppingListTab = ({ orders, catalog }) => {
 
 // ─── Main Admin Component ───
 const Admin = () => {
+  const currentUserEmail = (() => {
+    try { const lu = localStorage.getItem("local_user"); if (lu) return JSON.parse(lu).email; } catch {}
+    return auth.currentUser?.email;
+  })();
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [catalog, setCatalog] = useState([]);
@@ -1040,7 +1044,7 @@ const Admin = () => {
                       WebkitTapHighlightColor: "transparent",
                     }}>👑 Admin</button>
                   )}
-                  {u.is_admin && (
+                  {u.is_admin && u.email !== currentUserEmail && (
                     <button onClick={() => handleToggleAdmin(u.uid, false)} style={{
                       padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
                       border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
