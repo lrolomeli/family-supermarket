@@ -170,7 +170,14 @@ const MyOrders = () => {
     if (editingOrderId === orderId) {
       const product = editedProducts[productIndex];
       if (!confirm(`¿Eliminar "${product.name}" del pedido?`)) return;
-      setEditedProducts(prev => prev.filter((_, i) => i !== productIndex));
+      const remaining = editedProducts.filter((_, i) => i !== productIndex);
+      if (remaining.length === 0) {
+        if (!confirm("El pedido se quedará sin productos. ¿Eliminar el pedido completo?")) return;
+        await handleRemoveOrder(orderId);
+        setEditingOrderId(null);
+        return;
+      }
+      setEditedProducts(remaining);
       setSuccess("Producto eliminado. Guarda los cambios para aplicar.");
       setTimeout(() => setSuccess(""), 3000);
       return;
