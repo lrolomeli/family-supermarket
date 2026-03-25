@@ -447,6 +447,7 @@ const Admin = () => {
   const [invitations, setInvitations] = useState([]);
   const [requests, setRequests] = useState([]);
   const [showPrices, setShowPrices] = useState(true);
+  const [storeClosed, setStoreClosed] = useState(false);
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
@@ -456,7 +457,7 @@ const Admin = () => {
   const fetchCategories = async () => { try { const r = await apiFetch(`${API_BASE_URL}/categories`); setCategories(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchInvitations = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/invitations`); setInvitations(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchRequests = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/requests`); setRequests(await r.json()); } catch (e) { console.error("Error:", e); } };
-  const fetchSettings = async () => { try { const r = await apiFetch(`${API_BASE_URL}/settings`); const s = await r.json(); setShowPrices(s.show_prices !== "false"); } catch (e) { console.error("Error:", e); } };
+  const fetchSettings = async () => { try { const r = await apiFetch(`${API_BASE_URL}/settings`); const s = await r.json(); setShowPrices(s.show_prices !== "false"); setStoreClosed(s.store_closed === "true"); } catch (e) { console.error("Error:", e); } };
 
   const refreshCatalog = async () => {
     try {
@@ -559,6 +560,15 @@ const Admin = () => {
     await apiFetch(`${API_BASE_URL}/admin/settings`, {
       method: "PUT",
       body: JSON.stringify({ key: "show_prices", value: String(newValue) }),
+    });
+  };
+
+  const handleToggleStoreClosed = async () => {
+    const newValue = !storeClosed;
+    setStoreClosed(newValue);
+    await apiFetch(`${API_BASE_URL}/admin/settings`, {
+      method: "PUT",
+      body: JSON.stringify({ key: "store_closed", value: String(newValue) }),
     });
   };
 
@@ -1061,11 +1071,34 @@ const Admin = () => {
 
       {/* ─── SETTINGS ─── */}
       {tab === "Categories" && (
-        <div>
-          <div style={{ textAlign: "center", padding: "48px 20px", color: "#d1d5db" }}>
-            <div style={{ fontSize: "48px", marginBottom: "8px" }}>⚙️</div>
-            <p style={{ margin: 0, fontSize: "14px", color: "#9ca3af" }}>Ajustes (próximamente)</p>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <label style={{
+            display: "flex", alignItems: "center", gap: "12px",
+            padding: "14px", background: "#fff", borderRadius: "14px",
+            border: "1px solid #e5e7eb", cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}>
+            <input type="checkbox" checked={!showPrices} onChange={handleToggleShowPrices}
+              style={{ width: "20px", height: "20px", accentColor: "#15803d" }} />
+            <div>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>Ocultar precios</div>
+              <div style={{ fontSize: "12px", color: "#6b7280" }}>Los usuarios no verán los precios de los productos</div>
+            </div>
+          </label>
+
+          <label style={{
+            display: "flex", alignItems: "center", gap: "12px",
+            padding: "14px", background: storeClosed ? "#fef2f2" : "#fff", borderRadius: "14px",
+            border: storeClosed ? "1.5px solid #fca5a5" : "1px solid #e5e7eb", cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}>
+            <input type="checkbox" checked={storeClosed} onChange={handleToggleStoreClosed}
+              style={{ width: "20px", height: "20px", accentColor: "#dc2626" }} />
+            <div>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: storeClosed ? "#dc2626" : "#111827" }}>Cerrar temporalmente</div>
+              <div style={{ fontSize: "12px", color: "#6b7280" }}>No se aceptarán nuevas órdenes. Los usuarios podrán navegar pero no crear pedidos.</div>
+            </div>
+          </label>
         </div>
       )}
     </div>

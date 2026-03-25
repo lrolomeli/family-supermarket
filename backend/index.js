@@ -784,6 +784,13 @@ server.get("/orders", authenticate, async (req, res) => {
 server.post("/orders", authenticate, async (req, res) => {
   try {
     if (!await isApproved(req.user.uid)) return res.status(403).json({ reason: "not_approved" });
+
+    // Check if store is closed
+    const { rows: settings } = await pool.query("SELECT value FROM settings WHERE key = 'store_closed'");
+    if (settings.length && settings[0].value === "true") {
+      return res.status(403).send("El negocio está temporalmente cerrado. No se aceptan nuevas órdenes.");
+    }
+
     const { products } = req.body;
     
     const productsJson = typeof products === 'string' ? products : JSON.stringify(products);

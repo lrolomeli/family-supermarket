@@ -126,7 +126,7 @@ const Order = () => {
   const [focused, setFocused] = useState(false);
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState("search"); // "search" | "list"
-  const { showPrices } = useSettings();
+  const { showPrices, storeClosed } = useSettings();
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -235,6 +235,20 @@ const Order = () => {
           Busca productos y agrégalos al carrito
         </p>
       </div>
+
+      {storeClosed && (
+        <div style={{
+          padding: "12px 16px", borderRadius: "12px", marginBottom: "16px",
+          background: "#fef2f2", border: "1.5px solid #fca5a5",
+          display: "flex", alignItems: "center", gap: "10px",
+        }}>
+          <span style={{ fontSize: "20px" }}>🔒</span>
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#dc2626" }}>Negocio temporalmente cerrado</div>
+            <div style={{ fontSize: "12px", color: "#6b7280" }}>No se aceptan nuevas órdenes por el momento. Puedes navegar y agregar favoritos.</div>
+          </div>
+        </div>
+      )}
 
       {/* View mode toggle */}
       <div style={{
@@ -506,18 +520,18 @@ const Order = () => {
         }}>
           <button
             onClick={handleSubmitOrder}
-            disabled={submitting}
+            disabled={submitting || storeClosed}
             style={{
               width: "100%", maxWidth: "600px", margin: "0 auto", display: "block",
-              padding: "14px", background: submitting ? "#86efac" : "#15803d",
+              padding: "14px", background: storeClosed ? "#d1d5db" : submitting ? "#86efac" : "#15803d",
               color: "#fff", border: "none", borderRadius: "14px",
-              fontSize: "16px", fontWeight: 700, cursor: submitting ? "default" : "pointer",
+              fontSize: "16px", fontWeight: 700, cursor: (submitting || storeClosed) ? "default" : "pointer",
               WebkitTapHighlightColor: "transparent",
-              boxShadow: "0 4px 12px rgba(21,128,61,0.3)",
+              boxShadow: storeClosed ? "none" : "0 4px 12px rgba(21,128,61,0.3)",
               pointerEvents: "auto",
             }}
           >
-            {submitting ? "Enviando..." : `Confirmar Orden (${cart.length} productos)`}
+            {storeClosed ? "🔒 Negocio cerrado" : submitting ? "Enviando..." : `Confirmar Orden (${cart.length} productos)`}
           </button>
         </div>
       )}
