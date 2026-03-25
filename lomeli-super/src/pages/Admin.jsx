@@ -408,11 +408,31 @@ const ShoppingListTab = ({ orders, catalog }) => {
     );
   };
 
+  const downloadCSV = () => {
+    const rows = [["Producto", "Cantidad", "Unidad"]];
+    consolidated.forEach(i => rows.push([i.name, i.quantity, i.unit === "kg" ? "kg" : "piezas"]));
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lista-compras-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
-      <p style={{ color: "#9ca3af", fontSize: "12px", marginBottom: "12px" }}>
-        {activeOrders.length} {activeOrders.length === 1 ? "orden activa" : "órdenes activas"} · {consolidated.length} productos
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <p style={{ color: "#9ca3af", fontSize: "12px", margin: 0 }}>
+          {activeOrders.length} {activeOrders.length === 1 ? "orden activa" : "órdenes activas"} · {consolidated.length} productos
+        </p>
+        <button onClick={downloadCSV} style={{
+          padding: "8px 14px", background: "#f0fdf4", color: "#15803d",
+          border: "1px solid #dcfce7", borderRadius: "8px", cursor: "pointer",
+          fontSize: "12px", fontWeight: 600, WebkitTapHighlightColor: "transparent",
+        }}>📥 CSV</button>
+      </div>
       {byKg.length > 0 && (
         <>
           <div style={{ fontSize: "13px", fontWeight: 700, color: "#6b7280", margin: "12px 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
