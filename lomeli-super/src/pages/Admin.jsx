@@ -455,6 +455,7 @@ const Admin = () => {
   const [tab, setTab] = useState("Dashboard");
   const [filterStatus, setFilterStatus] = useState("not_delivered");
   const [filterUser, setFilterUser] = useState("all");
+  const [editingUserId, setEditingUserId] = useState(null);
 
   const fetchOrders = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/orders`); setOrders(await r.json()); } catch (e) { console.error("Error:", e); } };
   const fetchUsers = async () => { try { const r = await apiFetch(`${API_BASE_URL}/admin/users`); setUsers(await r.json()); } catch (e) { console.error("Error:", e); } };
@@ -496,7 +497,6 @@ const Admin = () => {
   };
 
   const handleToggleAdmin = async (uid, isAdmin) => {
-    if (!confirm(isAdmin ? "¿Hacer administrador a este usuario?" : "¿Quitar permisos de administrador?")) return;
     await apiFetch(`${API_BASE_URL}/admin/users/${uid}/admin`, { method: "PATCH", body: JSON.stringify({ is_admin: isAdmin }) });
     await fetchUsers();
   };
@@ -1014,52 +1014,68 @@ const Admin = () => {
               Aprueba o rechaza el acceso de cada usuario.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {users.map(u => (
+              {users.map(u => {
+                const isEditing = editingUserId === u.uid;
+                const isSelf = u.email === currentUserEmail;
+                return (
                 <div key={u.uid} style={{
-                  background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px",
-                  padding: "12px 14px", display: "flex", alignItems: "center", gap: "10px",
+                  background: isEditing ? "#f9fafb" : "#fff", border: isEditing ? "1.5px solid #15803d" : "1px solid #e5e7eb", borderRadius: "12px",
+                  padding: "12px 14px", overflow: "hidden",
                 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {u.email}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {u.email}
+                        {u.is_admin && (
+                          <span style={{ marginLeft: "6px", fontSize: "10px", background: "#ede9fe", color: "#7c3aed", padding: "2px 6px", borderRadius: "999px", fontWeight: 700 }}>Admin</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "11px", color: u.is_approved ? "#16a34a" : "#d97706", fontWeight: 600, marginTop: "2px" }}>
+                        {u.is_approved ? "✓ Aprobado" : "⏳ Pendiente"}
+                      </div>
+                    </div>
+                    {!isSelf && (
+                      <button onClick={() => setEditingUserId(isEditing ? null : u.uid)} style={{
+                        padding: "8px 14px", background: isEditing ? "#e5e7eb" : "#f9fafb", color: "#374151",
+                        border: "1px solid #e5e7eb", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                        WebkitTapHighlightColor: "transparent",
+                      }}>{isEditing ? "Cerrar" : "✏️ Editar"}</button>
+                    )}
+                  </div>
+                  {isEditing && (
+                    <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap" }}>
+                      {!u.is_approved && (
+                        <button onClick={async () => { await handleApprove(u.uid, true); setEditingUserId(null); }} style={{
+                          padding: "8px 14px", background: "#f0fdf4", color: "#15803d",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                          WebkitTapHighlightColor: "transparent",
+                        }}>✅ Aprobar</button>
+                      )}
+                      {u.is_approved && !u.is_admin && (
+                        <button onClick={async () => { await handleApprove(u.uid, false); setEditingUserId(null); }} style={{
+                          padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                          WebkitTapHighlightColor: "transparent",
+                        }}>🚫 Revocar acceso</button>
+                      )}
+                      {u.is_approved && !u.is_admin && (
+                        <button onClick={async () => { await handleToggleAdmin(u.uid, true); setEditingUserId(null); }} style={{
+                          padding: "8px 14px", background: "#ede9fe", color: "#7c3aed",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                          WebkitTapHighlightColor: "transparent",
+                        }}>👑 Hacer Admin</button>
+                      )}
                       {u.is_admin && (
-                        <span style={{ marginLeft: "6px", fontSize: "10px", background: "#ede9fe", color: "#7c3aed", padding: "2px 6px", borderRadius: "999px", fontWeight: 700 }}>Admin</span>
+                        <button onClick={async () => { await handleToggleAdmin(u.uid, false); setEditingUserId(null); }} style={{
+                          padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
+                          border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
+                          WebkitTapHighlightColor: "transparent",
+                        }}>🔽 Quitar Admin</button>
                       )}
                     </div>
-                    <div style={{ fontSize: "11px", color: u.is_approved ? "#16a34a" : "#d97706", fontWeight: 600, marginTop: "2px" }}>
-                      {u.is_approved ? "✓ Aprobado" : "⏳ Pendiente"}
-                    </div>
-                  </div>
-                  {!u.is_approved && (
-                    <button onClick={() => handleApprove(u.uid, true)} style={{
-                      padding: "8px 14px", background: "#f0fdf4", color: "#15803d",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-                      WebkitTapHighlightColor: "transparent",
-                    }}>Aprobar</button>
-                  )}
-                  {u.is_approved && !u.is_admin && (
-                    <button onClick={() => handleToggleAdmin(u.uid, true)} style={{
-                      padding: "8px 14px", background: "#ede9fe", color: "#7c3aed",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-                      WebkitTapHighlightColor: "transparent",
-                    }}>👑 Admin</button>
-                  )}
-                  {u.is_admin && u.email !== currentUserEmail && (
-                    <button onClick={() => handleToggleAdmin(u.uid, false)} style={{
-                      padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-                      WebkitTapHighlightColor: "transparent",
-                    }}>Quitar Admin</button>
-                  )}
-                  {u.is_approved && !u.is_admin && (
-                    <button onClick={() => handleApprove(u.uid, false)} style={{
-                      padding: "8px 14px", background: "#fef2f2", color: "#dc2626",
-                      border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 600,
-                      WebkitTapHighlightColor: "transparent",
-                    }}>Revocar</button>
                   )}
                 </div>
-              ))}
+              );})}
             </div>
           </div>
         </div>
