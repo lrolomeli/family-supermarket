@@ -718,6 +718,22 @@ server.put("/admin/settings", authenticate, async (req, res) => {
       "INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
       [key, value]
     );
+
+    // Notify all users when store is closed
+    if (key === "store_closed" && value === "true" && emailTransporter) {
+      const { rows: approvedUsers } = await pool.query("SELECT email FROM users WHERE is_approved = true");
+      const emails = approvedUsers.map(u => u.email).filter(Boolean);
+      if (emails.length) {
+        emailTransporter.sendMail({
+          from: `"Lomeli Super" <${process.env.SMTP_USER}>`,
+          bcc: emails,
+          subject: "Lomeli Super — Temporalmente cerrado",
+          text: "Hola,\n\nTe informamos que Lomeli Super se encuentra temporalmente cerrado (vacaciones). No se aceptarán nuevas órdenes por el momento.\n\nTe avisaremos cuando estemos de vuelta.\n\nLomeli Super",
+          html: `<p>Hola,</p><p>Te informamos que <strong>Lomeli Super</strong> se encuentra temporalmente cerrado (vacaciones).</p><p>No se aceptarán nuevas órdenes por el momento.</p><p style="color:#6b7280;font-size:13px;">Te avisaremos cuando estemos de vuelta.</p><p>Lomeli Super</p>`,
+        }).catch(err => console.error("Error sending store closed emails:", err.message));
+      }
+    }
+
     res.status(200).json({ key, value });
   } catch (error) {
     res.status(500).send(error.message);
