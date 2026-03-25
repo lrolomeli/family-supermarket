@@ -105,10 +105,7 @@ const Login = () => {
         display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
         maxWidth: "360px", width: "100%", boxSizing: "border-box",
       }}>
-        <img src="/images/logo.svg" alt="Ay! Te Encargo" style={{ width: "64px", height: "64px" }} />
-        <h1 style={{ margin: 0, fontSize: "26px", fontWeight: 800, color: "#15803d", letterSpacing: "-0.5px" }}>
-          Ay! Te Encargo
-        </h1>
+        <img src="/images/logo.svg" alt="Ay! Te Encargo" style={{ width: "120px", height: "120px" }} />
         <p style={{ margin: 0, color: "#6b7280", fontSize: "14px", textAlign: "center" }}>
           Haz tu pedido de despensa fácil y rápido
         </p>

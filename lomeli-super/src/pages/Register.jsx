@@ -113,7 +113,7 @@ const Register = () => {
     <div style={wrapStyle}>
       <div style={{ ...cardStyle, textAlign: "left" }}>
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
-          <img src="/images/logo.svg" alt="Ay! Te Encargo" style={{ width: "56px", height: "56px" }} />
+          <img src="/images/logo.svg" alt="Ay! Te Encargo" style={{ width: "120px", height: "120px" }} />
           <h1 style={{ margin: "8px 0 4px", fontSize: "24px", fontWeight: 800, color: "#15803d" }}>Crear Cuenta</h1>
           <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>Registro con invitación</p>
         </div>
