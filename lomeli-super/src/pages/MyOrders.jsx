@@ -126,10 +126,11 @@ const MyOrders = () => {
         if (i !== index) return p;
         if (field === "quantity") {
           const num = Number(value);
-          return { ...p, quantity: p.unit === "pieces" ? Math.round(num) : num };
+          const min = p.unit === "kg" ? 0.25 : 1;
+          return { ...p, quantity: p.unit === "pieces" ? Math.max(1, Math.round(num)) : Math.max(min, num) };
         }
         if (field === "unit") {
-          const newQty = value === "pieces" ? Math.max(1, Math.round(p.quantity)) : p.quantity;
+          const newQty = value === "pieces" ? Math.max(1, Math.round(p.quantity)) : Math.max(0.25, p.quantity);
           return { ...p, unit: value, quantity: newQty };
         }
         return { ...p, [field]: value };
