@@ -811,11 +811,14 @@ server.post("/orders", authenticate, async (req, res) => {
     
     const productsJson = typeof products === 'string' ? products : JSON.stringify(products);
     
-    if (!productsJson || productsJson.trim() === '') {
-      throw new Error('Products data is empty');
+    if (!productsJson || productsJson.trim() === '' || productsJson === '[]') {
+      return res.status(400).send("La orden debe tener al menos un producto");
     }
     // Validate JSON
-    JSON.parse(productsJson);
+    const parsed = JSON.parse(productsJson);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return res.status(400).send("La orden debe tener al menos un producto");
+    }
     
     const { rows } = await pool.query(
       "INSERT INTO orders (uid, products, status) VALUES ($1, $2, 'pending') RETURNING id",
@@ -857,6 +860,13 @@ server.put("/orders/:id", authenticate, async (req, res) => {
     // Check if order can be modified (only pending orders can be edited)
     if (rows[0].status !== 'pending') {
       return res.status(403).send("Order cannot be modified - it's already in progress or delivered");
+    }
+
+    // If no products, delete the order
+    const productsList = Array.isArray(products) ? products : JSON.parse(products || "[]");
+    if (!productsList.length) {
+      await pool.query("DELETE FROM orders WHERE id = $1", [id]);
+      return res.status(200).json({ deleted: true, message: "Order deleted - no products" });
     }
 
     await pool.query("UPDATE orders SET products = $1 WHERE id = $2", [
@@ -917,6 +927,12 @@ server.delete("/orders/:orderId/products/:productIndex", authenticate, async (re
 
     const products = rows[0].products;
     products.splice(Number(productIndex), 1);
+
+    // If no products left, delete the order
+    if (!products.length) {
+      await pool.query("DELETE FROM orders WHERE id = $1", [orderId]);
+      return res.status(200).json({ deleted: true, message: "Order deleted - no products remaining" });
+    }
 
     await pool.query("UPDATE orders SET products = $1 WHERE id = $2", [
       JSON.stringify(products),
