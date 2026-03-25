@@ -649,9 +649,15 @@ const Admin = () => {
   const ordersByUser = useMemo(() => {
     const groups = {};
     filteredOrders.forEach(o => { const key = o.user_email || o.uid; if (!groups[key]) groups[key] = []; groups[key].push(o); });
-    Object.values(groups).forEach(arr => arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+    const pendingIds = new Set(requests.filter(r => r.status === "pending").map(r => r.order_id));
+    Object.values(groups).forEach(arr => arr.sort((a, b) => {
+      const aReq = pendingIds.has(a.id) ? 1 : 0;
+      const bReq = pendingIds.has(b.id) ? 1 : 0;
+      if (bReq !== aReq) return bReq - aReq;
+      return new Date(b.created_at) - new Date(a.created_at);
+    }));
     return groups;
-  }, [filteredOrders]);
+  }, [filteredOrders, requests]);
 
   const CHART_COLORS = ["#3b82f6","#22c55e","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899"];
 
