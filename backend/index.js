@@ -58,7 +58,7 @@ const sendAdminEmail = async (subject, text) => {
   if (!adminEmail) return;
   try {
     await emailTransporter.sendMail({
-      from: `"Ahí te encargo" <${process.env.SMTP_USER}>`,
+      from: `"Ay! Te Encargo" <${process.env.SMTP_USER}>`,
       to: adminEmail,
       subject,
       text,
@@ -350,11 +350,11 @@ server.post("/auth/forgot-password", async (req, res) => {
 
     if (emailTransporter) {
       await emailTransporter.sendMail({
-        from: `"Ahí te encargo" <${process.env.SMTP_USER}>`,
+        from: `"Ay! Te Encargo" <${process.env.SMTP_USER}>`,
         to: email,
-        subject: "Restablecer contraseña - Ahí te encargo",
-        text: `Hola,\n\nRecibimos una solicitud para restablecer tu contraseña.\n\nHaz clic en el siguiente enlace (válido por 1 hora):\n${resetLink}\n\nSi no solicitaste esto, ignora este correo.\n\nAhí te encargo`,
-        html: `<p>Hola,</p><p>Recibimos una solicitud para restablecer tu contraseña.</p><p><a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#15803d;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Restablecer contraseña</a></p><p style="color:#6b7280;font-size:13px;">Este enlace es válido por 1 hora. Si no solicitaste esto, ignora este correo.</p><p>Ahí te encargo</p>`,
+        subject: "Restablecer contraseña - Ay! Te Encargo",
+        text: `Hola,\n\nRecibimos una solicitud para restablecer tu contraseña.\n\nHaz clic en el siguiente enlace (válido por 1 hora):\n${resetLink}\n\nSi no solicitaste esto, ignora este correo.\n\nAy! Te Encargo`,
+        html: `<p>Hola,</p><p>Recibimos una solicitud para restablecer tu contraseña.</p><p><a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#15803d;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Restablecer contraseña</a></p><p style="color:#6b7280;font-size:13px;">Este enlace es válido por 1 hora. Si no solicitaste esto, ignora este correo.</p><p>Ay! Te Encargo</p>`,
       });
     }
 
@@ -725,11 +725,11 @@ server.put("/admin/settings", authenticate, async (req, res) => {
       const emails = approvedUsers.map(u => u.email).filter(Boolean);
       if (emails.length) {
         emailTransporter.sendMail({
-          from: `"Ahí te encargo" <${process.env.SMTP_USER}>`,
+          from: `"Ay! Te Encargo" <${process.env.SMTP_USER}>`,
           bcc: emails,
-          subject: "Ahí te encargo — Temporalmente cerrado",
-          text: "Hola,\n\nTe informamos que Ahí te encargo se encuentra temporalmente cerrado (vacaciones). No se aceptarán nuevas órdenes por el momento.\n\nTe avisaremos cuando estemos de vuelta.\n\nAhí te encargo",
-          html: `<p>Hola,</p><p>Te informamos que <strong>Ahí te encargo</strong> se encuentra temporalmente cerrado (vacaciones).</p><p>No se aceptarán nuevas órdenes por el momento.</p><p style="color:#6b7280;font-size:13px;">Te avisaremos cuando estemos de vuelta.</p><p>Ahí te encargo</p>`,
+          subject: "Ay! Te Encargo — Temporalmente cerrado",
+          text: "Hola,\n\nTe informamos que Ay! Te Encargo se encuentra temporalmente cerrado (vacaciones). No se aceptarán nuevas órdenes por el momento.\n\nTe avisaremos cuando estemos de vuelta.\n\nAy! Te Encargo",
+          html: `<p>Hola,</p><p>Te informamos que <strong>Ay! Te Encargo</strong> se encuentra temporalmente cerrado (vacaciones).</p><p>No se aceptarán nuevas órdenes por el momento.</p><p style="color:#6b7280;font-size:13px;">Te avisaremos cuando estemos de vuelta.</p><p>Ay! Te Encargo</p>`,
         }).catch(err => console.error("Error sending store closed emails:", err.message));
       }
     }
